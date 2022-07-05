@@ -1,0 +1,25 @@
+<?xml version='1.0' encoding='utf-8'?>
+<plugin id="cordova-plugin-zego" version="0.0.1" xmlns="http://apache.org/cordova/ns/plugins/1.0">
+    <name>CDVZegoLive</name>
+    <js-module name="CDVZegoLive" src="www/live.js">
+        <clobbers target="CDVZegoLive" />
+    </js-module>
+    <platform name="ios">
+        <config-file parent="/*" target="config.xml">
+            <feature name="CDVZegoLive">
+                <param name="ios-package" value="CDVZegoLive" />
+            </feature>
+        </config-file>
+        <header-file src="src/ios/CDVZegoLive.h" />
+        <source-file src="src/ios/CDVZegoLive.m" />
+        <podspec>
+            <config>
+                <source url="https://github.com/CocoaPods/Specs.git"/>
+            </config>
+            <pods use-frameworks="true">
+                <pod name="ZegoFaceUnity" git="git@github.com/boboxiaodd/ZegoFaceUnity.git" />
+            </pods>
+        </podspec>
+    </platform>
+
+</plugin>
