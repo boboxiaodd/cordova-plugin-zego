@@ -55,7 +55,7 @@
         <header-file src="src/ios/FaceUnity/FUAPIDemoBar/modle/FUDateHandle.h" />
         <source-file src="src/ios/FaceUnity/FUAPIDemoBar/modle/FUDateHandle.m" />
 
-        <resource-file src="src/ios/FaceUnity/FUAPIDemoBar/Base.lproj" />
+        <resource-file src="src/ios/FaceUnity/FUAPIDemoBar/FUAPIDemoBar.xib" />
         <resource-file src="src/ios/FaceUnity/FUAPIDemoBar/Media.xcassets" />
         <framework src="VideoToolbox.framework" />
         <podspec>
