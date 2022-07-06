@@ -32,7 +32,7 @@
     _rootVC = (MainViewController *)[UIApplication sharedApplication].keyWindow.rootViewController;
     _rootVC.webView.backgroundColor = UIColor.clearColor;
     _rootVC.webView.opaque = false;
-    NSString *sign = [self settingForKey:@"zego.sign"]; //@"00d3d9904cf0100cef1ba7b92def547bab782cf9690922ca220aa604a00a2ad1";
+    NSString *sign = [self settingForKey:@"zego.sign"];
     ZegoEngineProfile * profile = [ZegoEngineProfile new];
     profile.appID = [[self settingForKey:@"zego.appid"] intValue];
     profile.appSign = sign;
