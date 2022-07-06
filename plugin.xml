@@ -13,12 +13,59 @@
         </config-file>
         <header-file src="src/ios/CDVZegoLive.h" />
         <source-file src="src/ios/CDVZegoLive.m" />
+        <header-file src="src/ios/FaceUnity/big_endian.h" />
+        <header-file src="src/ios/FaceUnity/FUCamera.h" />
+        <source-file src="src/ios/FaceUnity/FUCamera.m" />
+        <header-file src="src/ios/FaceUnity/FUManager.h" />
+        <source-file src="src/ios/FaceUnity/FUManager.m" />
+        <header-file src="src/ios/FaceUnity/FUOpenGLView.h" />
+        <source-file src="src/ios/FaceUnity/FUOpenGLView.m" />
+        <header-file src="src/ios/FaceUnity/FURecordEncoder.h" />
+        <source-file src="src/ios/FaceUnity/FURecordEncoder.m" />
+        <header-file src="src/ios/FaceUnity/FUTestRecorder.h" />
+        <source-file src="src/ios/FaceUnity/FUTestRecorder.m" />
+        <header-file src="src/ios/FaceUnity/ZGCaptureDeviceCamera.h" />
+        <source-file src="src/ios/FaceUnity/ZGCaptureDeviceCamera.m" />
+        <header-file src="src/ios/FaceUnity/ZGCaptureDeviceImage.h" />
+        <source-file src="src/ios/FaceUnity/ZGCaptureDeviceImage.m" />
+        <header-file src="src/ios/FaceUnity/ZGCaptureDeviceProtocol.h" />
+        <header-file src="src/ios/FaceUnity/ZGVideoFrameEncoder.h" />
+        <source-file src="src/ios/FaceUnity/ZGVideoFrameEncoder.mm" />
+
+        <header-file src="src/ios/FaceUnity/FUAPIDemoBar/FUAPIDemoBar.h" />
+        <source-file src="src/ios/FaceUnity/FUAPIDemoBar/FUAPIDemoBar.m" />
+        <header-file src="src/ios/FaceUnity/FUAPIDemoBar/FUBeautyEditView.h" />
+        <source-file src="src/ios/FaceUnity/FUAPIDemoBar/FUBeautyEditView.m" />
+        <header-file src="src/ios/FaceUnity/FUAPIDemoBar/FUBeautyParam.h" />
+        <source-file src="src/ios/FaceUnity/FUAPIDemoBar/FUBeautyParam.m" />
+        <header-file src="src/ios/FaceUnity/FUAPIDemoBar/FUBeautyView.h" />
+        <source-file src="src/ios/FaceUnity/FUAPIDemoBar/FUBeautyView.m" />
+        <header-file src="src/ios/FaceUnity/FUAPIDemoBar/FUBottomColletionView.h" />
+        <source-file src="src/ios/FaceUnity/FUAPIDemoBar/FUBottomColletionView.m" />
+        <header-file src="src/ios/FaceUnity/FUAPIDemoBar/FUDemoBarDefine.h" />
+        <header-file src="src/ios/FaceUnity/FUAPIDemoBar/FUFilterView.h" />
+        <source-file src="src/ios/FaceUnity/FUAPIDemoBar/FUFilterView.m" />
+        <header-file src="src/ios/FaceUnity/FUAPIDemoBar/FUSlider.h" />
+        <source-file src="src/ios/FaceUnity/FUAPIDemoBar/FUSlider.m" />
+        <header-file src="src/ios/FaceUnity/FUAPIDemoBar/UIColor+FUAPIDemoBar.h" />
+        <source-file src="src/ios/FaceUnity/FUAPIDemoBar/UIColor+FUAPIDemoBar.m" />
+        <header-file src="src/ios/FaceUnity/FUAPIDemoBar/UIImage+demobar.h" />
+        <source-file src="src/ios/FaceUnity/FUAPIDemoBar/UIImage+demobar.m" />
+
+        <header-file src="src/ios/FaceUnity/FUAPIDemoBar/modle/FUDateHandle.h" />
+        <source-file src="src/ios/FaceUnity/FUAPIDemoBar/modle/FUDateHandle.m" />
+
+        <resource-file src="src/ios/FaceUnity/FUAPIDemoBar/Base.lproj" />
+        <resource-file src="src/ios/FaceUnity/FUAPIDemoBar/Media.xcassets" />
+        <framework src="VideoToolbox.framework" />
         <podspec>
             <config>
                 <source url="https://github.com/CocoaPods/Specs.git"/>
             </config>
             <pods use-frameworks="true">
-                <pod name="ZegoFaceUnity" options=":git => 'https://github.com/boboxiaodd/ZegoFaceUnity.git'" />
+                <pod name="Masonry" />
+                <pod name="Nama-lite" />
+                <pod name="ZegoExpressEngine/Video" />
             </pods>
         </podspec>
     </platform>

@@ -36,6 +36,7 @@
     ZegoEngineProfile * profile = [ZegoEngineProfile new];
     profile.appID = [[self settingForKey:@"zego.appid"] intValue];
     profile.appSign = sign;
+
     _zego = [ZegoExpressEngine createEngineWithProfile:profile eventHandler:self];
 
     [_zego enableHardwareDecoder:YES];
