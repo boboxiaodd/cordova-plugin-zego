@@ -16,7 +16,7 @@
             <config>
                 <source url="https://github.com/CocoaPods/Specs.git"/>
             </config>
-            <pods use-frameworks="true">
+            <pods>
                 <pod name="ZegoFaceUnity" options=":git => 'https://github.com/boboxiaodd/ZegoFaceUnity.git'" />
             </pods>
         </podspec>
