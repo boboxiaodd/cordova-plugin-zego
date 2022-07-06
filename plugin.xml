@@ -8,6 +8,7 @@
         <config-file parent="/*" target="config.xml">
             <feature name="CDVZegoLive">
                 <param name="ios-package" value="CDVZegoLive" />
+                <param name="onload" value="true" />
             </feature>
         </config-file>
         <header-file src="src/ios/CDVZegoLive.h" />
