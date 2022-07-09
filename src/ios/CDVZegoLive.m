@@ -127,8 +127,10 @@
     _live_command = command;
     _is_video_call = YES;
     [[UIApplication sharedApplication] setIdleTimerDisabled:YES];
-    _rootVC.webView.backgroundColor = UIColor.clearColor;
-    _rootVC.webView.opaque = false;
+    if(_rootVC.webView.backgroundColor != UIColor.clearColor){
+    	_rootVC.webView.backgroundColor = UIColor.clearColor;
+    	_rootVC.webView.opaque = false;
+    }
     //创建拉流view
     _playView = [[UIView alloc] initWithFrame:UIScreen.mainScreen.bounds];
     [_rootVC.view insertSubview:_playView belowSubview:_rootVC.webView];
