@@ -7,6 +7,7 @@
 #import "FUAPIDemoBar.h"
 #import <Masonry/Masonry.h>
 #import <AVFoundation/AVFoundation.h>
+#import <AudioToolbox/AudioToolbox.h>
 #import <AVKit/AVKit.h>
 #import "MainViewController.h"
 #define BEAUTY_SHAPE_FILE @"NoCloud/beauty_shape.plist"
@@ -34,6 +35,7 @@
 @property (nonatomic,strong) UITapGestureRecognizer *switchGesture;
 @property (nonatomic,readwrite) BOOL hasSwitchView;
 @property (nonatomic,readwrite) BOOL is_video_call;
+@property (nonatomic,strong) AVAudioPlayer* audioPlayer;
 
 @end
 
@@ -79,6 +81,30 @@
     [_zego setCustomVideoCaptureHandler:self];
     [_zego setVideoMirrorMode:(ZegoVideoMirrorModeNoMirror) channel:ZegoPublishChannelMain];
 }
+-(void)playRingtone:(CDVInvokedUrlCommand *)command
+{
+    if(!_audioPlayer){
+        NSDictionary *options = [command.arguments objectAtIndex: 0];
+        NSString * path = [options valueForKey:@"path"];
+        BOOL loop = [[options valueForKey:@"loop"] boolValue];
+        [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayback error:nil];
+        _audioPlayer = [[AVAudioPlayer alloc] initWithContentsOfURL: [NSURL fileURLWithPath:path] error:nil];
+        if(loop){
+            [_audioPlayer setNumberOfLoops: -1];
+        }else{
+            [_audioPlayer setNumberOfLoops: 1];
+        }
+        [_audioPlayer play];
+    }
+}
+-(void)stopRingtone
+{
+    if(_audioPlayer){
+        [_audioPlayer stop];
+        _audioPlayer = nil;
+    }
+}
+
 //加入房间
 -(void) joinRoom:(CDVInvokedUrlCommand *)command
 {
@@ -127,10 +153,8 @@
     _live_command = command;
     _is_video_call = YES;
     [[UIApplication sharedApplication] setIdleTimerDisabled:YES];
-    if(_rootVC.webView.backgroundColor != UIColor.clearColor){
-    	_rootVC.webView.backgroundColor = UIColor.clearColor;
-    	_rootVC.webView.opaque = false;
-    }
+    _rootVC.webView.backgroundColor = UIColor.clearColor;
+    _rootVC.webView.opaque = false;
     //创建拉流view
     _playView = [[UIView alloc] initWithFrame:UIScreen.mainScreen.bounds];
     [_rootVC.view insertSubview:_playView belowSubview:_rootVC.webView];

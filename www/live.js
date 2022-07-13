@@ -19,7 +19,12 @@ const CDVZegoLive = {
     snapshot: function () {
         exec(null, null, 'CDVZegoLive', 'snapshot', []);
     },
-
+    playRingtone:function (option){
+        exec(null,null,'CDVZegoLive','playRingtone',[option]);
+    },
+    stopRingtone:function (){
+        exec(null,null,'CDVZegoLive','stopRingtone',[]);
+    },
     //同步回调
     callStart: function (success) {
         exec(success, null, 'CDVZegoLive', 'callStart', []);
