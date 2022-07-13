@@ -56,8 +56,6 @@
     NSLog(@"--------------- init CDVZegoLive --------");
     if(_zego) return;
 
-    _rootVC = (MainViewController *)[UIApplication sharedApplication].keyWindow.rootViewController;
-
     NSString *sign = [self settingForKey:@"zego.sign"];
     ZegoEngineProfile * profile = [ZegoEngineProfile new];
     profile.appID = [[self settingForKey:@"zego.appid"] intValue];
@@ -153,6 +151,7 @@
     _live_command = command;
     _is_video_call = YES;
     [[UIApplication sharedApplication] setIdleTimerDisabled:YES];
+    if(!_rootVC) _rootVC = (MainViewController *)[UIApplication sharedApplication].keyWindow.rootViewController;
     _rootVC.webView.backgroundColor = UIColor.clearColor;
     _rootVC.webView.opaque = false;
     //创建拉流view
