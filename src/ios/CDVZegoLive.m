@@ -97,7 +97,7 @@
         [_audioPlayer play];
     }
 }
--(void)stopRingtone
+-(void)stopRingtone:(CDVInvokedUrlCommand *)command
 {
     if(_audioPlayer){
         [_audioPlayer stop];
