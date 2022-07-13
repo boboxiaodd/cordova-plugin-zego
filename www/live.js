@@ -4,6 +4,12 @@ const CDVZegoLive = {
     joinRoom: function (option) {
         exec(null, null, 'CDVZegoLive', 'joinRoom', [option]);
     },
+    setMineViewText:function (options){
+        exec(null, null, 'CDVZegoLive', 'setMineViewText', [options]);
+    },
+    setPlayViewText:function (options){
+        exec(null, null, 'CDVZegoLive', 'setPlayViewText', [options]);
+    },
     startVideoCall: function (success) {
         exec(success, null, 'CDVZegoLive', 'startVideoCall', []);
     },

@@ -28,7 +28,9 @@
 @property (nonatomic,readwrite) NSString * current_room_id;
 @property (nonatomic,readwrite) NSString * play_stream_id;
 @property (nonatomic,strong) UIView * mineView;
+@property (nonatomic,strong) UILabel * mineViewText;
 @property (nonatomic,strong) UIView * playView;
+@property (nonatomic,strong) UILabel * playViewText;
 @property (nonatomic,readwrite) CGFloat minWindowHeight;
 @property (nonatomic,readwrite) CGFloat minWindowWidth;
 @property (nonatomic,strong) UIPanGestureRecognizer *panGesture;
@@ -146,6 +148,29 @@
     [self send_event:command withMessage:@{@"result":@"ok"} Alive:NO State:YES];
 }
 
+-(void) setMineViewText:(CDVInvokedUrlCommand *)command
+{
+    NSDictionary *options = [command.arguments objectAtIndex: 0];
+    NSString *text = [options valueForKey:@"text"];
+    if([text isEqualToString:@""]){
+        [_mineViewText setHidden:YES];
+    }else{
+        [_mineViewText setText:text];
+        [_mineViewText setHidden:NO];
+    }
+}
+-(void) setPlayViewText:(CDVInvokedUrlCommand *)command
+{
+    NSDictionary *options = [command.arguments objectAtIndex: 0];
+    NSString *text = [options valueForKey:@"text"];
+    if([text isEqualToString:@""]){
+        [_playViewText setHidden:YES];
+    }else{
+        [_playViewText setText:text];
+        [_playViewText setHidden:NO];
+    }
+}
+
 -(void) startVideoCall:(CDVInvokedUrlCommand *)command
 {
     _live_command = command;
@@ -156,11 +181,29 @@
     _rootVC.webView.opaque = false;
     //创建拉流view
     _playView = [[UIView alloc] initWithFrame:UIScreen.mainScreen.bounds];
+    _playViewText  = [[UILabel alloc] initWithFrame: CGRectMake(0, 0, _playView.frame.size.width, _playView.frame.size.height)];
+    _playViewText.backgroundColor = [self colorWithHex:0x000000 alpha:0.3];
+    _playViewText.font = [UIFont systemFontOfSize:12.0];
+    _playViewText.textColor = [UIColor whiteColor];
+    _playViewText.textAlignment = NSTextAlignmentCenter;
+    _playViewText.text = @"";
+    [_playViewText setHidden:YES];
+    [_playView addSubview: _playViewText];
+
     [_rootVC.view insertSubview:_playView belowSubview:_rootVC.webView];
     //创建预览view
     CGSize size = [UIScreen mainScreen].bounds.size;
     CGFloat safeTop =  UIApplication.sharedApplication.keyWindow.safeAreaInsets.top;
     _mineView = [[UIView alloc] initWithFrame:CGRectMake(size.width - _minWindowWidth - 8, safeTop + 8, _minWindowWidth, _minWindowHeight)];
+    _mineViewText  = [[UILabel alloc] initWithFrame: CGRectMake(0, 0, _mineView.frame.size.width, _mineView.frame.size.height)];
+    _mineViewText.backgroundColor = [self colorWithHex:0x000000 alpha:0.3];
+    _mineViewText.font = [UIFont systemFontOfSize:12.0];
+    _mineViewText.textColor = [UIColor whiteColor];
+    _mineViewText.textAlignment = NSTextAlignmentCenter;
+    _mineViewText.text = @"";
+    [_mineViewText setHidden:YES];
+    [_mineView addSubview:_mineViewText];
+
     [self.viewController.view addSubview: _mineView];
 
     //开启预览
@@ -386,8 +429,10 @@
         [_mineView removeGestureRecognizer:self.panGesture];
         [_mineView removeGestureRecognizer:self.switchGesture];
         [_playView setFrame:CGRectMake(size.width - _minWindowWidth - 8, safeTop + 8, _minWindowWidth, _minWindowHeight)];
+        [_playViewText setFrame:CGRectMake(0, 0, _playView.frame.size.width, _playView.frame.size.height)];
 
         [_mineView setFrame:UIScreen.mainScreen.bounds];
+        [_mineViewText setFrame:UIScreen.mainScreen.bounds];
 
         [_rootVC.webView.superview bringSubviewToFront:_rootVC.webView];
         [_playView.superview bringSubviewToFront:_playView];
@@ -399,7 +444,9 @@
         [_playView removeGestureRecognizer:self.panGesture];
         [_playView removeGestureRecognizer:self.switchGesture];
         [_mineView setFrame:CGRectMake(size.width - _minWindowWidth - 8, safeTop + 8, _minWindowWidth, _minWindowHeight)];
+        [_mineViewText setFrame:CGRectMake(0, 0, _mineView.frame.size.width, _mineView.frame.size.height)];
 
+        [_playView setFrame:UIScreen.mainScreen.bounds];
         [_playView setFrame:UIScreen.mainScreen.bounds];
 
         [_rootVC.webView.superview bringSubviewToFront:_rootVC.webView];
@@ -711,6 +758,12 @@
     UIImage * img = UIGraphicsGetImageFromCurrentImageContext();
     UIGraphicsEndImageContext();
     return img;
+}
+- (UIColor*)colorWithHex:(NSInteger)hexValue alpha:(CGFloat)alphaValue
+{
+    return [UIColor colorWithRed:((float)((hexValue & 0xFF0000) >> 16))/255.0
+                           green:((float)((hexValue & 0xFF00) >> 8))/255.0
+                            blue:((float)(hexValue & 0xFF))/255.0 alpha:alphaValue];
 }
 
 @end
