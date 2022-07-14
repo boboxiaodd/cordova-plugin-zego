@@ -280,6 +280,23 @@
     }
 }
 
+-(void) startPreview:(CDVInvokedUrlCommand *)command
+{
+    _live_command = command;
+    _playView = [[UIView alloc] initWithFrame:UIScreen.mainScreen.bounds];
+    [_rootVC.view insertSubview:_playView belowSubview: _rootVC.webView];
+    [_zego setCameraZoomFactor:1.0 channel:ZegoPublishChannelMain];
+    [_zego enableCamera:YES];
+    ZegoCanvas * canvas = [ZegoCanvas canvasWithView: _playView];
+    [canvas setViewMode:ZegoViewModeAspectFill];
+    [_zego startPreview: canvas];
+}
+-(void) stopPreview:(CDVInvokedUrlCommand *)command
+{
+    [_zego stopPreview];
+    [_playView removeFromSuperview];
+    _playView = nil;
+}
 
 -(void) showBeauty:(CDVInvokedUrlCommand *)command
 {

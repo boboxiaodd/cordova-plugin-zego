@@ -47,6 +47,12 @@ const CDVZegoLive = {
     openCamera: function (success) {
         exec(success, null, 'CDVZegoLive', 'openCamera', []);
     },
+    startPreview:function (success){
+        exec(success,null,'CDVZegoLive','startPreview',[]);
+    },
+    stopPreview:function (){
+        exec(null,null,'CDVZegoLive','stopPreview',[]);
+    },
     showBeauty: function (success) {
         exec(success, null, 'CDVZegoLive', 'showBeauty', []);
     },
