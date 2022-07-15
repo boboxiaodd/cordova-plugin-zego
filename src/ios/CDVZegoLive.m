@@ -284,6 +284,9 @@
 {
     _live_command = command;
     _playView = [[UIView alloc] initWithFrame:UIScreen.mainScreen.bounds];
+    if(!_rootVC) _rootVC = (MainViewController *)[UIApplication sharedApplication].keyWindow.rootViewController;
+    _rootVC.webView.backgroundColor = UIColor.clearColor;
+    _rootVC.webView.opaque = false;
     [_rootVC.view insertSubview:_playView belowSubview: _rootVC.webView];
     [_zego setCameraZoomFactor:1.0 channel:ZegoPublishChannelMain];
     [_zego enableCamera:YES];
