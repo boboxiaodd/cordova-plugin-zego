@@ -65,7 +65,7 @@
             <pods use-frameworks="true">
                 <pod name="Masonry" />
                 <pod name="Nama-lite" />
-                <pod name="ZegoExpressEngine/Video" />
+                <pod name="ZegoExpressEngine/Video" spec="~> 2.21.1" />
             </pods>
         </podspec>
     </platform>
