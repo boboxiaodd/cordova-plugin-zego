@@ -449,7 +449,7 @@
         [_mineView removeGestureRecognizer:self.panGesture];
         [_mineView removeGestureRecognizer:self.switchGesture];
         [_playView setFrame:CGRectMake(size.width - _minWindowWidth - 8, safeTop + 8, _minWindowWidth, _minWindowHeight)];
-        [_playViewText setFrame:CGRectMake(0, 0, _playView.frame.size.width, _playView.frame.size.height)];
+        [_playViewText setFrame:CGRectMake(0, 0, _minWindowWidth, _minWindowHeight)];
 
         [_mineView setFrame:UIScreen.mainScreen.bounds];
         [_mineViewText setFrame:UIScreen.mainScreen.bounds];
@@ -464,10 +464,10 @@
         [_playView removeGestureRecognizer:self.panGesture];
         [_playView removeGestureRecognizer:self.switchGesture];
         [_mineView setFrame:CGRectMake(size.width - _minWindowWidth - 8, safeTop + 8, _minWindowWidth, _minWindowHeight)];
-        [_mineViewText setFrame:CGRectMake(0, 0, _mineView.frame.size.width, _mineView.frame.size.height)];
+        [_mineViewText setFrame:CGRectMake(0, 0, _minWindowWidth, _minWindowHeight)];
 
         [_playView setFrame:UIScreen.mainScreen.bounds];
-        [_playView setFrame:UIScreen.mainScreen.bounds];
+        [_playViewText setFrame:UIScreen.mainScreen.bounds];
 
         [_rootVC.webView.superview bringSubviewToFront:_rootVC.webView];
         [_mineView.superview bringSubviewToFront:_mineView];
