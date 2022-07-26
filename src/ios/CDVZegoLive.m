@@ -58,10 +58,9 @@
     NSLog(@"--------------- init CDVZegoLive --------");
     if(_zego) return;
 
-    NSString *sign = [self settingForKey:@"zego.sign"];
     ZegoEngineProfile * profile = [ZegoEngineProfile new];
     profile.appID = [[self settingForKey:@"zego.appid"] intValue];
-    profile.appSign = sign;
+//    profile.appSign = sign;
 
     _zego = [ZegoExpressEngine createEngineWithProfile:profile eventHandler:self];
 
