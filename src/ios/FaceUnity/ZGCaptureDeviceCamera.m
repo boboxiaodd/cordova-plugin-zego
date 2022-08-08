@@ -52,43 +52,43 @@
     if (self.isRunning) {
         return;
     }
-    
+
     [self.session beginConfiguration];
-    
+
     if ([self.session canSetSessionPreset:AVCaptureSessionPreset1280x720]) {
         [self.session setSessionPreset:AVCaptureSessionPreset1280x720];
     }
-    
+
     AVCaptureDeviceInput *input = self.input;
-    
+
     if ([self.session canAddInput:input]) {
         [self.session addInput:input];
     }
-    
-    
+
+
     AVCaptureVideoDataOutput *output = self.output;
-    
+
     if ([self.session canAddOutput:output]) {
         [self.session addOutput:output];
     }
-    
+
     AVCaptureConnection *captureConnection = [output connectionWithMediaType:AVMediaTypeVideo];
 
     // Mirror the video when using the front camera
     if (input.device.position == AVCaptureDevicePositionFront) {
         captureConnection.videoMirrored = YES;
     }
-    
+
     if (captureConnection.isVideoOrientationSupported) {
         captureConnection.videoOrientation = AVCaptureVideoOrientationPortrait;
     }
-    
+
     [self.session commitConfiguration];
-    
+
     if (!self.session.isRunning) {
         [self.session startRunning];
     }
-    
+
     self.isRunning = YES;
     NSLog(@"⏺ Camera has started capturing");
 }
@@ -98,14 +98,23 @@
     if (!self.isRunning) {
         return;
     }
-    
+
     if (self.session.isRunning) {
         [self.session stopRunning];
         [self.session removeInput:_input];
     }
-    
+
     self.isRunning = NO;
     NSLog(@"⏹ Camera has stopped capturing");
+}
+
+- (void)setCameraPosition:(AVCaptureDevicePosition)position{
+    self.cameraPosition = position;
+    // Restart capture
+    if (self.isRunning) {
+        [self stopCapture];
+        [self startCapture];
+    }
 }
 
 - (void)switchCameraPosition {

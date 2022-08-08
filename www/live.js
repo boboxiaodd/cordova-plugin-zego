@@ -41,6 +41,9 @@ const CDVZegoLive = {
     switchCamera: function (success) {
         exec(success, null, 'CDVZegoLive', 'switchCamera', []);
     },
+    setCameraPosition: function (success,options) {
+        exec(success, null, 'CDVZegoLive', 'setCameraPosition', [options]);
+    },
     closeCamera: function (success) {
         exec(success, null, 'CDVZegoLive', 'closeCamera', []);
     },
