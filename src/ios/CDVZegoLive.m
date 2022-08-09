@@ -253,9 +253,9 @@
     NSDictionary *options = [command.arguments objectAtIndex: 0];
     int position = [[options valueForKey:@"position"] intValue];
     if(position == 0){
-        [_captureDevice setCameraPosition:AVCaptureDevicePositionFront];
+        [_captureDevice setZegoCameraPosition:AVCaptureDevicePositionFront];
     }else{
-        [_captureDevice setCameraPosition:AVCaptureDevicePositionBack];
+        [_captureDevice setZegoCameraPosition:AVCaptureDevicePositionBack];
     }
     [self send_event:command withMessage:@{@"result":@"ok"} Alive:NO State:YES];
 }
