@@ -108,7 +108,7 @@
     NSLog(@"⏹ Camera has stopped capturing");
 }
 
-- (void)setCameraPosition:(AVCaptureDevicePosition)position{
+- (void)setZegoCameraPosition:(AVCaptureDevicePosition)position{
     self.cameraPosition = position;
     // Restart capture
     if (self.isRunning) {

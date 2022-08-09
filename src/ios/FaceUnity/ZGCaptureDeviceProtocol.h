@@ -47,7 +47,7 @@ typedef NS_ENUM(NSUInteger, ZGCustomVideoCaptureBufferType) {
 // Only for camera
 - (void)switchCameraPosition;
 
-- (void)setCameraPosition:(AVCaptureDevicePosition)position;
+- (void)setZegoCameraPosition:(AVCaptureDevicePosition)position;
 
 - (void)setFramerate:(int)framerate;
 
