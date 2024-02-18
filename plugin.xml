@@ -64,8 +64,8 @@
             </config>
             <pods use-frameworks="true">
                 <pod name="Masonry" />
-                <pod name="Nama-lite" />
-                <pod name="ZegoExpressEngine/Video" spec="~> 2.21.1" />
+                <pod name="FURenderKit" />
+                <pod name="ZegoExpressEngine" />
             </pods>
         </podspec>
     </platform>
