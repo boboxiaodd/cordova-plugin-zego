@@ -7,8 +7,6 @@
 //
 
 #import "FUManager.h"
-#import <libCNamaSDK/CNamaSDK.h>
-
 #import <CoreMotion/CoreMotion.h>
 #import "authpack.h"
 #import <sys/utsname.h>
@@ -22,7 +20,7 @@
 }
 
 @property (nonatomic, strong) CMMotionManager *motionManager;
-
+@property (nonatomic, assign) FUDevicePerformanceLevel devicePerformanceLevel;
 @property (nonatomic, assign) int deviceOrientation;
 
 
@@ -45,28 +43,46 @@ static FUManager *shareManager = NULL;
 - (instancetype)init
 {
     if (self = [super init]) {
+        FUSetupConfig *setupConfig = [[FUSetupConfig alloc] init];
+        setupConfig.authPack = FUAuthPackMake(g_auth_package, sizeof(g_auth_package));
         
-        [self setupDeviceMotion];
-        _asyncLoadQueue = dispatch_queue_create("com.faceLoadItem", DISPATCH_QUEUE_SERIAL);
+        // 初始化 FURenderKit
+        [FURenderKit setupWithSetupConfig:setupConfig];
+        
+        [FURenderKit setLogLevel:FU_LOG_LEVEL_INFO];
+        
+        self.devicePerformanceLevel = [FURenderKit devicePerformanceLevel];
+        
+        dispatch_async(dispatch_get_global_queue(0, 0), ^{
+            // 加载人脸 AI 模型
+            NSString *faceAIPath = [[NSBundle mainBundle] pathForResource:@"ai_face_processor" ofType:@"bundle"];
+            NSLog(@"ai_face_processor = %@",faceAIPath);
+            [FUAIKit loadAIModeWithAIType:FUAITYPE_FACEPROCESSOR dataPath:faceAIPath];
+            
+            // 设置人脸算法质量
+            [FUAIKit shareKit].faceProcessorFaceLandmarkQuality = self.devicePerformanceLevel == FUDevicePerformanceLevelHigh ? FUFaceProcessorFaceLandmarkQualityHigh : FUFaceProcessorFaceLandmarkQualityMedium;
+            
+            // 设置小脸检测是否打开
+            [FUAIKit shareKit].faceProcessorDetectSmallFace = self.devicePerformanceLevel == FUDevicePerformanceLevelHigh;
+            
+            
+            NSString *path = [[NSBundle mainBundle] pathForResource:@"face_beautification" ofType:@"bundle"];
+            self.beauty = [[FUBeauty alloc] initWithPath:path name:@"FUBeauty"];
+            [FURenderKit shareRenderKit].beauty = self.beauty;
+            
+            /* 默认精细磨皮 */
+            [[FURenderKit shareRenderKit].beauty setHeavyBlur:0];
+            [[FURenderKit shareRenderKit].beauty setBlurType:2];
+            [[FURenderKit shareRenderKit].beauty setFaceShape:4];
+            
+            [self setupSkinData];
+            [self setupShapData];
+            [self setupFilterData];
+            [self setBeautyParameters];
 
-        /**这里新增了一个参数shouldCreateContext，设为YES的话，不用在外部设置context操作，我们会在内部创建并持有一个context。
-         还有设置为YES,则需要调用FURenderer.h中的接口，不能再调用funama.h中的接口。*/
-        [[FURenderer shareRenderer] setupWithData:nil dataSize:0 ardata:nil authPackage:&g_auth_package authSize:sizeof(g_auth_package) shouldCreateContext:YES];
+        });
         
-        /* 加载AI模型 */
-        [self loadAIModle];
-        
-        /* 美颜 */
-        [self setupFilterData];
-        [self setupShapData];
-        [self setupSkinData];
-        
-        [self loadFilter];
-        
-        NSLog(@"faceunitySDK version:%@",[FURenderer getVersion]);
-        [FURenderer setMaxFaces:1];
-        self.deviceOrientation = 0;
-        self.isRender = YES;
+        [FUAIKit shareKit].maxTrackFaces = 1;
     }
     
     return self;
@@ -74,18 +90,9 @@ static FUManager *shareManager = NULL;
 
 
 #pragma mark -  nama查询&设置
-- (void)   setAsyncTrackFaceEnable:(BOOL)enable{
-    
+- (void) setAsyncTrackFaceEnable:(BOOL)enable{
+
     [FURenderer setAsyncTrackFaceEnable:enable];
-}
-
--(void)loadAIModle{
-
-//    NSData *ai_human_processor = [NSData dataWithContentsOfFile:[[NSBundle mainBundle] pathForResource:@"ai_human_processor.bundle" ofType:nil]];
-//    [FURenderer loadAIModelFromPackage:(void *)ai_human_processor.bytes size:(int)ai_human_processor.length aitype:FUAITYPE_HUMAN_PROCESSOR];
-//
-    NSData *ai_face_processor = [NSData dataWithContentsOfFile:[[NSBundle mainBundle] pathForResource:@"ai_face_processor_lite.bundle" ofType:nil]];
-    [FURenderer loadAIModelFromPackage:(void *)ai_face_processor.bytes size:(int)ai_face_processor.length aitype:FUAITYPE_FACEPROCESSOR];
 }
 
 - (void)loadBundleWithName:(NSString *)name aboutType:(FUNamaHandleType)type{
@@ -135,84 +142,48 @@ static FUManager *shareManager = NULL;
 
 static int oldHandle = 0;
 -(void)filterValueChange:(FUBeautyParam *)param{
-    dispatch_async(_asyncLoadQueue, ^{
-        [[FURenderer shareRenderer] setUpCurrentContext];
-        NSLog(@" %@ = %f",param.mParam, param.mValue);
-           if (param.type == FUDataTypeBeautify) {
-               if(self->items[FUNamaHandleTypeBeauty] == 0){
-                   [self loadFilter];
-               }
-               if ([param.mParam isEqualToString:@"cheek_narrow"] || [param.mParam isEqualToString:@"cheek_small"]){//程度值 只去一半
-                   [FURenderer itemSetParam:self->items[FUNamaHandleTypeBeauty] withName:param.mParam value:@(param.mValue * 0.5)];
-
-               }else if([param.mParam isEqualToString:@"blur_level"]) {//磨皮 0~6
-                   [FURenderer itemSetParam:self->items[FUNamaHandleTypeBeauty] withName:param.mParam value:@(param.mValue * 6)];
-               }else{
-                   [FURenderer itemSetParam:self->items[FUNamaHandleTypeBeauty] withName:param.mParam value:@(param.mValue)];
-               }
-           }else if (param.type == FUDataTypeFilter){
-               if(self->items[FUNamaHandleTypeBeauty] == 0){
-                   [self loadFilter];
-               }
-               
-               int handle = [[FUManager shareManager] getHandleAboutType:FUNamaHandleTypeBeauty];
-               [FURenderer itemSetParam:handle withName:@"filter_name" value:[param.mParam lowercaseString]];
-               [FURenderer itemSetParam:handle withName:@"filter_level" value:@(param.mValue)]; //滤镜程度
-               self.seletedFliter = param;
-
-           }
-        [[FURenderer shareRenderer] setBackCurrentContext];
-    });
-
+    NSLog(@" %@ = %f %lu",param.mParam, param.mValue, (unsigned long)param.type);
+   if (param.type == FUDataTypeBeautify) {
+       if ([param.mParam isEqualToString:@"cheek_narrow"] || [param.mParam isEqualToString:@"cheek_small"]){//程度值 只去一半
+           [[FURenderKit shareRenderKit].beauty setValue:@(param.mValue * 0.5) forKey:param.mParam];
+       }else if([param.mParam isEqualToString:@"blur_level"]) {//磨皮 0~6
+           [[FURenderKit shareRenderKit].beauty setValue:@(param.mValue * 6) forKey:param.mParam];
+       }else{
+           [[FURenderKit shareRenderKit].beauty setValue:@(param.mValue) forKey:param.mParam];
+       }
+   }else if (param.type == FUDataTypeFilter){
+       [[FURenderKit shareRenderKit].beauty setFilterName:[param.mParam lowercaseString]];
+       [[FURenderKit shareRenderKit].beauty setFilterLevel:param.mValue];
+       self.seletedFliter = param;
+   }
 }
 
 
 /**加载美颜道具*/
 - (void)loadFilter{
-    dispatch_async(_asyncLoadQueue, ^{
-        if (items[FUNamaHandleTypeBeauty] == 0) {
 
-            CFAbsoluteTime startTime = CFAbsoluteTimeGetCurrent();
-
-            NSString *path = [[NSBundle mainBundle] pathForResource:@"face_beautification.bundle" ofType:nil];
-            items[FUNamaHandleTypeBeauty] = [FURenderer itemWithContentsOfFile:path];
-
-            /* 默认精细磨皮 */
-            [FURenderer itemSetParam:items[FUNamaHandleTypeBeauty] withName:@"heavy_blur" value:@(0)];
-            [FURenderer itemSetParam:items[FUNamaHandleTypeBeauty] withName:@"blur_type" value:@(2)];
-            /* 默认自定义脸型 */
-            [FURenderer itemSetParam:items[FUNamaHandleTypeBeauty] withName:@"face_shape" value:@(4)];
-            [self setBeautyParameters];
-            
-            CFAbsoluteTime endTime = (CFAbsoluteTimeGetCurrent() - startTime);
-
-            NSLog(@"加载美颜道具耗时: %f ms", endTime * 1000.0);
-     
-        }
-    });
 }
 
 
 - (void)setBeautyParameters{
-       for (FUBeautyParam *modle in _skinParams){
+   for (FUBeautyParam *modle in _skinParams){
         if ([modle.mParam isEqualToString:@"blur_level"]) {
-            [FURenderer itemSetParam:items[FUNamaHandleTypeBeauty] withName:modle.mParam value:@(modle.mValue * 6)];
+            [[FURenderKit shareRenderKit].beauty setValue:@(modle.mValue * 6) forKey:modle.mParam];
         }else{
-            [FURenderer itemSetParam:items[FUNamaHandleTypeBeauty] withName:modle.mParam value:@(modle.mValue)];
+            [[FURenderKit shareRenderKit].beauty setValue:@(modle.mValue) forKey:modle.mParam];
         }
     }
     
     for (FUBeautyParam *modle in _shapeParams){
-         [FURenderer itemSetParam:items[FUNamaHandleTypeBeauty] withName:modle.mParam value:@(modle.mValue)];
+        [[FURenderKit shareRenderKit].beauty setValue:@(modle.mValue) forKey:modle.mParam];
      }
     
     
     /* 设置默认状态 */
     if (self.seletedFliter) {
-        [FURenderer itemSetParam:items[FUNamaHandleTypeBeauty] withName:@"filter_name" value:[self.seletedFliter.mParam lowercaseString]];
-        [FURenderer itemSetParam:items[FUNamaHandleTypeBeauty] withName:@"filter_level" value:@(self.seletedFliter.mValue)];
+        [[FURenderKit shareRenderKit].beauty setFilterName:[self.seletedFliter.mParam lowercaseString]];
+        [[FURenderKit shareRenderKit].beauty setFilterLevel:self.seletedFliter.mValue];
     }
-    
 }
 
 -(void)setupFilterData{
@@ -280,16 +251,23 @@ static int oldHandle = 0;
 }
 
 -(void)setupSkinData{
-    NSArray *prams = @[@"blur_level",@"color_level",@"red_level",@"sharpen",@"eye_bright",@"tooth_whiten",@"remove_pouch_strength",@"remove_nasolabial_folds_strength"];//
-    NSDictionary *titelDic = @{@"blur_level":@"精细磨皮",@"color_level":@"美白",@"red_level":@"红润",@"sharpen":@"锐化",@"remove_pouch_strength":@"去黑眼圈",@"remove_nasolabial_folds_strength":@"去法令纹",@"eye_bright":@"亮眼",@"tooth_whiten":@"美牙"};
-    NSDictionary *defaultValueDic = @{@"blur_level":@(1.0),
-                                      @"color_level":@(0.8),
-                                      @"red_level":@(0.6),
+    NSArray *prams = @[@"blurLevel",@"colorLevel",@"redLevel",@"sharpen",@"eyeBright",@"toothWhiten",@"removePouchStrength",@"removeNasolabialFoldsStrength"];//
+    NSDictionary *titelDic = @{@"blurLevel":@"精细磨皮",
+                               @"colorLevel":@"美白",
+                               @"redLevel":@"红润",
+                               @"sharpen":@"锐化",
+                               @"removePouchStrength":@"去黑眼圈",
+                               @"removeNasolabialFoldsStrength":@"去法令纹",
+                               @"eyeBright":@"亮眼",
+                               @"toothWhiten":@"美牙"};
+    NSDictionary *defaultValueDic = @{@"blurLevel":@(1.0),
+                                      @"colorLevel":@(0.8),
+                                      @"redLevel":@(0.6),
                                       @"sharpen":@(0.2),
-                                      @"remove_pouch_strength":@(0),
-                                      @"remove_nasolabial_folds_strength":@(0),
-                                      @"eye_bright":@(0.2),
-                                      @"tooth_whiten":@(0.2)};
+                                      @"removePouchStrength":@(0),
+                                      @"removeNasolabialFoldsStrength":@(0),
+                                      @"eyeBright":@(0.2),
+                                      @"toothWhiten":@(0.2)};
     
     
     if (!_skinParams) {
@@ -309,25 +287,25 @@ static int oldHandle = 0;
 }
 
 -(void)setupShapData{
-   NSArray *prams = @[@"cheek_thinning",@"cheek_v",@"cheek_narrow",@"cheek_small",@"eye_enlarging",@"intensity_chin",@"intensity_forehead",@"intensity_nose",@"intensity_mouth",@"intensity_canthus",@"intensity_eye_space",@"intensity_eye_rotate",@"intensity_long_nose",@"intensity_philtrum",@"intensity_smile"];
-    NSDictionary *titelDic = @{@"cheek_thinning":@"瘦脸",@"cheek_v":@"v脸",@"cheek_narrow":@"窄脸",@"cheek_small":@"小脸",@"eye_enlarging":@"大眼",@"intensity_chin":@"下巴",
-                               @"intensity_forehead":@"额头",@"intensity_nose":@"瘦鼻",@"intensity_mouth":@"嘴型",@"intensity_canthus":@"开眼角",@"intensity_eye_space":@"眼距",@"intensity_eye_rotate":@"眼睛角度",@"intensity_long_nose":@"长鼻",@"intensity_philtrum":@"缩人中",@"intensity_smile":@"微笑嘴角"
+   NSArray *prams = @[@"cheekThinning",@"cheekV",@"cheekNarrow",@"cheekSmall",@"eyeEnlarging",@"intensityChin",@"intensityForehead",@"intensityNose",@"intensityMouth",@"intensityCanthus",@"intensityEyeSpace",@"intensityEyeRotate",@"intensityLongNose",@"intensityPhiltrum",@"intensitySmile"];
+    NSDictionary *titelDic = @{@"cheekThinning":@"瘦脸",@"cheekV":@"v脸",@"cheekNarrow":@"窄脸",@"cheekSmall":@"小脸",@"eyeEnlarging":@"大眼",@"intensityChin":@"下巴",
+                               @"intensityForehead":@"额头",@"intensityNose":@"瘦鼻",@"intensityMouth":@"嘴型",@"intensityCanthus":@"开眼角",@"intensityEyeSpace":@"眼距",@"intensityEyeRotate":@"眼睛角度",@"intensityLongNose":@"长鼻",@"intensityPhiltrum":@"缩人中",@"intensitySmile":@"微笑嘴角"
     };
-   NSDictionary *defaultValueDic = @{@"cheek_thinning":@(0.2),
-                                     @"cheek_v":@(0.2),
-                                     @"cheek_narrow":@(0.2),
-                                     @"cheek_small":@(0.2),
-                                     @"eye_enlarging":@(0.2),
-                                     @"intensity_chin":@(0.5),
-                                     @"intensity_forehead":@(0.5),
-                                     @"intensity_nose":@(0),
-                                     @"intensity_mouth":@(0.5),
-                                     @"intensity_canthus":@(0),
-                                     @"intensity_eye_space":@(0.5),
-                                     @"intensity_eye_rotate":@(0.5),
-                                     @"intensity_long_nose":@(0.5),
-                                     @"intensity_philtrum":@(0.5),
-                                     @"intensity_smile":@(0)
+   NSDictionary *defaultValueDic = @{@"cheekThinning":@(0.2),
+                                     @"cheekV":@(0.2),
+                                     @"cheekNarrow":@(0.2),
+                                     @"cheekSmall":@(0.2),
+                                     @"eyeEnlarging":@(0.2),
+                                     @"intensityChin":@(0.5),
+                                     @"intensityForehead":@(0.5),
+                                     @"intensityNose":@(0),
+                                     @"intensityMouth":@(0.5),
+                                     @"intensityCanthus":@(0),
+                                     @"intensityEyeSpace":@(0.5),
+                                     @"intensityEyeRotate":@(0.5),
+                                     @"intensityLongNose":@(0.5),
+                                     @"intensityPhiltrum":@(0.5),
+                                     @"intensitySmile":@(0)
    };
    
    if (!_shapeParams) {
@@ -336,7 +314,7 @@ static int oldHandle = 0;
    
    for (NSString *str in prams) {
        BOOL isStyle101 = NO;
-       if ([str isEqualToString:@"intensity_chin"] || [str isEqualToString:@"intensity_forehead"] || [str isEqualToString:@"intensity_mouth"] || [str isEqualToString:@"intensity_eye_space"] || [str isEqualToString:@"intensity_eye_rotate"] || [str isEqualToString:@"intensity_long_nose"] || [str isEqualToString:@"intensity_philtrum"]) {
+       if ([str isEqualToString:@"intensityChin"] || [str isEqualToString:@"intensityForehead"] || [str isEqualToString:@"intensityMouth"] || [str isEqualToString:@"intensityEyeSpace"] || [str isEqualToString:@"intensityEyeRotate"] || [str isEqualToString:@"intensityLongNose"] || [str isEqualToString:@"intensityPhiltrum"]) {
            isStyle101 = YES;
        }
        
@@ -353,20 +331,25 @@ static int oldHandle = 0;
 /**销毁全部道具*/
 - (void)destoryItems
 {
-    [FURenderer destroyAllItems];
-    
-    /**销毁道具后，为保证被销毁的句柄不再被使用，需要将int数组中的元素都设为0*/
-    for (int i = 0; i < sizeof(items) / sizeof(int); i++) {
-        items[i] = 0;
-    }
-    
-    /**销毁道具后，清除context缓存*/
-    [FURenderer OnDeviceLost];
-    
-    /**销毁道具后，重置人脸检测*/
-    [FURenderer onCameraChange];
-    
-    oldMakeup = nil;
+    NSLog(@"destoryItems...");
+    [FURenderKit shareRenderKit].beauty = nil;
+    [FURenderKit shareRenderKit].bodyBeauty = nil;
+    [FURenderKit shareRenderKit].makeup = nil;
+    [[FURenderKit shareRenderKit].stickerContainer removeAllSticks];
+//    [FURenderer destroyAllItems];
+//
+//    /**销毁道具后，为保证被销毁的句柄不再被使用，需要将int数组中的元素都设为0*/
+//    for (int i = 0; i < sizeof(items) / sizeof(int); i++) {
+//        items[i] = 0;
+//    }
+//
+//    /**销毁道具后，清除context缓存*/
+//    [FURenderer OnDeviceLost];
+//
+//    /**销毁道具后，重置人脸检测*/
+//    [FURenderer onCameraChange];
+//
+//    oldMakeup = nil;
     
 }
 
