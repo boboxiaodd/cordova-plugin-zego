@@ -9,7 +9,8 @@
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 #import <AVFoundation/AVFoundation.h>
-#import <libCNamaSDK/FURenderer.h>
+#import <FURenderKit/FURenderer.h>
+#import <FURenderKit/FURenderKit.h>
 #import "FUBeautyParam.h"
 #import "FUDateHandle.h"
 
@@ -33,6 +34,7 @@ typedef NS_ENUM(NSUInteger, FUNamaHandleType) {
 @property (nonatomic, assign) BOOL trackFlipx ;
 @property (nonatomic, assign) BOOL isRender;
 @property (nonatomic,assign)FUDataType currentType;
+@property (nonatomic, readwrite) FUBeauty *beauty;
 
 
 /* 滤镜参数 */
