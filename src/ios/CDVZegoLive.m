@@ -2,7 +2,7 @@
 #import "CDVZegoLive.h"
 #import <ZegoExpressEngine/ZegoExpressEngine.h>
 #import "ZGCaptureDeviceCamera.h"
-#import <libCNamaSDK/FURenderer.h>
+#import <FURenderKit/FURenderKit.h>
 #import "FUManager.h"
 #import "FUAPIDemoBar.h"
 #import <Masonry/Masonry.h>
@@ -16,14 +16,13 @@
 #define BEAUTY_VIEW_HEIGHT 194
 
 
-@interface CDVZegoLive () <ZegoEventHandler,FUAPIDemoBarDelegate,ZegoCustomVideoCaptureHandler,ZGCaptureDeviceDataOutputPixelBufferDelegate>
+@interface CDVZegoLive () <ZegoEventHandler,FUAPIDemoBarDelegate,ZegoCustomVideoProcessHandler>
 
 @property (nonatomic,strong) MainViewController *rootVC;
 @property (nonatomic,strong) ZegoExpressEngine * zego;
 @property (nonatomic,strong) FUAPIDemoBar * demoBar;
 @property (nonatomic,strong) UIView * beautyView;
 @property (nonatomic,strong) UIButton * saveButton;
-@property (nonatomic,strong) id<ZGCaptureDevice> captureDevice;
 @property (nonatomic,strong) CDVInvokedUrlCommand * live_command;
 @property (nonatomic,readwrite) NSString * current_room_id;
 @property (nonatomic,readwrite) NSString * play_stream_id;
@@ -44,12 +43,21 @@
 
 @implementation CDVZegoLive
 
-- (id<ZGCaptureDevice>)captureDevice {
-    if (!_captureDevice) {
-        _captureDevice = [[ZGCaptureDeviceCamera alloc] initWithPixelFormatType:kCVPixelFormatType_32BGRA];
-        _captureDevice.delegate = self;
+#pragma mark ZegoCustomVideoProcessHandler
+
+- (void)onStart:(ZegoPublishChannel)channel{
+//    [FURenderKit shareRenderKit].beauty = _beauty;    
+}
+- (void)onStop:(ZegoPublishChannel)channel{
+//    [FURenderKit clear];
+}
+- (void)onCapturedUnprocessedCVPixelBuffer:(CVPixelBufferRef)buffer timestamp:(CMTime)timestamp channel:(ZegoPublishChannel)channel{
+    if ([FUManager shareManager].isRender) {
+        FURenderInput *input = [[FURenderInput alloc] init];
+        input.pixelBuffer = buffer;
+        FURenderOutput *output = [[FURenderKit shareRenderKit] renderWithInput:input];
+        [[ZegoExpressEngine sharedEngine] sendCustomVideoProcessedCVPixelBuffer:output.pixelBuffer timestamp:timestamp channel:channel];
     }
-    return _captureDevice;
 }
 
 #pragma mark Cordova接口
@@ -67,18 +75,21 @@
     [_zego enableHardwareDecoder:YES];
     [_zego enableHardwareEncoder:YES];
 
-    [self load_beauty_skin_from_file];
-    [self load_beauty_shape_from_file];
-    [self load_beauty_filter_from_file];
 
     _minWindowHeight = [UIScreen mainScreen].bounds.size.height * 0.2;
     _minWindowWidth = [UIScreen mainScreen].bounds.size.width * 0.2;
 
-    ZegoCustomVideoCaptureConfig *captureConfig = [[ZegoCustomVideoCaptureConfig alloc] init];
-    captureConfig.bufferType = ZegoVideoBufferTypeCVPixelBuffer;
-    [_zego enableCustomVideoCapture:YES config:captureConfig channel:ZegoPublishChannelMain];
-    [_zego setCustomVideoCaptureHandler:self];
-    [_zego setVideoMirrorMode:(ZegoVideoMirrorModeNoMirror) channel:ZegoPublishChannelMain];
+    
+    [FUManager shareManager].isRender = YES;
+    
+    ZegoCustomVideoProcessConfig *config = [[ZegoCustomVideoProcessConfig alloc] init];
+    config.bufferType = ZegoVideoBufferTypeCVPixelBuffer;
+    [_zego enableCustomVideoProcessing:YES config:config];
+    [_zego setCustomVideoProcessHandler: self];
+    
+//    [_zego enableCustomVideoCapture:YES config:captureConfig channel:ZegoPublishChannelMain];
+//    [_zego setCustomVideoCaptureHandler:self];
+//    [_zego setVideoMirrorMode:(ZegoVideoMirrorModeNoMirror) channel:ZegoPublishChannelMain];
 }
 -(void)playRingtone:(CDVInvokedUrlCommand *)command
 {
@@ -103,6 +114,201 @@
         _audioPlayer = nil;
     }
 }
+
+
+
+
+//加入游戏房间
+-(void) joinGameRoom:(CDVInvokedUrlCommand *)command
+{
+    NSDictionary *options = [command.arguments objectAtIndex: 0];
+    NSString * roomID = [options valueForKey:@"roomID"];
+    NSString * userId = [options valueForKey:@"userId"];
+    NSString * userName = [options valueForKey:@"userName"];
+    ZegoRoomConfig * conf = [[ZegoRoomConfig alloc] init];
+    conf.isUserStatusNotify = YES;
+    conf.token = [options valueForKey:@"token"];
+    _current_room_id = roomID;
+    _hasSwitchView = NO;
+    [_zego loginRoom:roomID user:[ZegoUser userWithUserID:userId userName:userName] config: conf];
+}
+
+-(void)mainViewPan:(UIPanGestureRecognizer *)pan
+{
+    if(_live_command){
+        [self send_event:_live_command withMessage:@{@"event":@"open_video"} Alive:YES State:YES];
+    }
+}
+
+-(void) callGameStart:(CDVInvokedUrlCommand *)command
+{
+    _mineView.userInteractionEnabled = YES;
+    UITapGestureRecognizer *pan = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(mainViewPan:)];
+    [_mineView addGestureRecognizer:pan];
+    [self send_event:command withMessage:@{@"result":@"ok"} Alive:YES State:YES];
+}
+-(void) callGameEnd:(CDVInvokedUrlCommand *)command
+{
+    if(_play_stream_id) [_zego stopPlayingStream:_play_stream_id];
+    if(_current_room_id) [_zego logoutRoom:_current_room_id];
+    if(_is_video_call){
+        [_zego enableCamera:NO]; //停止摄像头
+        [_zego stopPreview: ZegoPublishChannelMain]; //停止预览
+        _hasSwitchView = NO;
+        [_mineView removeFromSuperview];
+        [_playView removeFromSuperview];
+    }
+    [_zego stopPublishingStream]; //停止推流
+
+    _current_room_id = nil;
+    _play_stream_id = nil;
+    _live_command = nil;
+    _hasSwitchView = NO;
+    [[UIApplication sharedApplication] setIdleTimerDisabled:NO];
+    [self send_event:command withMessage:@{@"result":@"ok"} Alive:NO State:YES];
+}
+
+-(void) setGameMineViewText:(CDVInvokedUrlCommand *)command
+{
+    NSDictionary *options = [command.arguments objectAtIndex: 0];
+    NSString *text = [options valueForKey:@"text"];
+    if([text isEqualToString:@""]){
+        [_mineViewText setHidden:YES];
+    }else{
+        [_mineViewText setText:text];
+        [_mineViewText setHidden:NO];
+    }
+}
+-(void) setGamePlayViewText:(CDVInvokedUrlCommand *)command
+{
+    NSDictionary *options = [command.arguments objectAtIndex: 0];
+    NSString *text = [options valueForKey:@"text"];
+    if([text isEqualToString:@""]){
+        [_playViewText setHidden:YES];
+    }else{
+        [_playViewText setText:text];
+        [_playViewText setHidden:NO];
+    }
+}
+
+-(void) startGameVideoCall:(CDVInvokedUrlCommand *)command
+{
+    _live_command = command;
+    _is_video_call = YES;
+    NSDictionary *options = [command.arguments objectAtIndex: 0];
+    NSDictionary *player_info = [options objectForKey:@"playerinfo"];
+    NSDictionary *my_info = [options objectForKey:@"myinfo"];
+    int player_width = [[player_info valueForKey:@"width"] intValue];
+    int player_height = [[player_info valueForKey:@"height"] intValue];
+    int player_x = [[player_info valueForKey:@"x"] intValue];
+    int player_y = [[player_info valueForKey:@"y"] intValue];
+    
+    int my_width = [[my_info valueForKey:@"width"] intValue];
+    int my_height = [[my_info valueForKey:@"height"] intValue];
+    int my_x = [[my_info valueForKey:@"x"] intValue];
+    int my_y = [[my_info valueForKey:@"y"] intValue];
+    
+    [[UIApplication sharedApplication] setIdleTimerDisabled:YES];
+
+    //创建拉流view
+    _playView = [[UIView alloc] initWithFrame:CGRectMake(player_x, player_y, player_width, player_height)];
+    _playViewText  = [[UILabel alloc] initWithFrame: CGRectMake(0, 0, _playView.frame.size.width, _playView.frame.size.height)];
+    _playViewText.backgroundColor = [self colorWithHex:0x000000 alpha:0.3];
+    _playViewText.font = [UIFont systemFontOfSize:12.0];
+    _playViewText.textColor = [UIColor whiteColor];
+    _playViewText.textAlignment = NSTextAlignmentCenter;
+    _playViewText.text = @"未开视频";
+    [_playViewText setHidden:NO];
+    [_playView addSubview: _playViewText];
+
+    [self.viewController.view addSubview: _playView];
+    
+    //创建预览view
+    _mineView = [[UIView alloc] initWithFrame:CGRectMake(my_x,my_y,my_width,my_height)];
+    _mineViewText  = [[UILabel alloc] initWithFrame: CGRectMake(0, 0, _mineView.frame.size.width, _mineView.frame.size.height)];
+    _mineViewText.backgroundColor = [self colorWithHex:0x000000 alpha:0.3];
+    _mineViewText.font = [UIFont systemFontOfSize:12.0];
+    _mineViewText.textColor = [UIColor whiteColor];
+    _mineViewText.textAlignment = NSTextAlignmentCenter;
+    _mineViewText.text = @"打开视频";
+    
+    [_mineViewText setHidden:NO];
+    [_mineView addSubview:_mineViewText];
+
+    [self.viewController.view addSubview: _mineView];
+
+    [self send_event:_live_command withMessage:@{@"event":@"startVideoCall"} Alive:YES State:YES];
+}
+
+
+-(void) startGamePublish:(CDVInvokedUrlCommand *)command
+{
+    //开启预览
+    [_mineViewText setHidden:YES];
+    [_zego setCameraZoomFactor:1.0 channel:ZegoPublishChannelMain];
+    [_zego enableCamera:YES];
+    [_zego enableAudioCaptureDevice:NO];
+    ZegoCanvas * canvas = [ZegoCanvas canvasWithView: _mineView];
+    [canvas setViewMode:ZegoViewModeAspectFill];
+    [_zego startPreview: canvas];
+    
+    NSDictionary *options = [command.arguments objectAtIndex: 0];
+    NSString *stream_id = [options valueForKey:@"stream_id"];
+    [_zego enableAudioCaptureDevice:YES];
+    [_zego startPublishingStream:stream_id channel:ZegoPublishChannelMain]; //推流
+}
+-(void) stopGamePublish:(CDVInvokedUrlCommand *)command
+{
+    [_zego stopPreview];
+    [_zego stopPublishingStream]; //推流
+    _mineViewText.text = @"打开视频";
+    [_mineViewText setHidden:NO];
+}
+
+-(void) startGamePlayStream:(CDVInvokedUrlCommand *)command
+{
+    NSDictionary *options = [command.arguments objectAtIndex: 0];
+    _play_stream_id = [options valueForKey:@"stream_id"];
+    [_playViewText setHidden:YES];
+    if(_is_video_call){
+        ZegoCanvas * canvas = [ZegoCanvas canvasWithView: _playView];
+        [canvas setViewMode:ZegoViewModeAspectFill];
+        [_zego startPlayingStream:_play_stream_id canvas: canvas];
+
+    }else{
+        [_zego startPlayingStream:_play_stream_id];
+    }
+}
+
+-(void) setGameCameraPosition:(CDVInvokedUrlCommand *)command
+{
+    NSDictionary *options = [command.arguments objectAtIndex: 0];
+    int position = [[options valueForKey:@"position"] intValue];
+    if(position == 0){
+        [_zego useFrontCamera:YES];
+    }else{
+        [_zego useFrontCamera:NO];
+    }
+    [self send_event:command withMessage:@{@"result":@"ok"} Alive:NO State:YES];
+}
+
+-(void) closeGameCamera:(CDVInvokedUrlCommand *)command
+{
+    [_zego enableCamera:NO];
+    [self send_event:command withMessage:@{@"result":@"ok"} Alive:NO State:YES];
+}
+-(void) openGameCamera:(CDVInvokedUrlCommand *)command
+{
+    [_zego enableCamera:YES];
+    [self send_event:command withMessage:@{@"result":@"ok"} Alive:NO State:YES];
+}
+
+
+
+
+
+
+
 
 //加入房间
 -(void) joinRoom:(CDVInvokedUrlCommand *)command
@@ -131,7 +337,7 @@
     if(_play_stream_id) [_zego stopPlayingStream:_play_stream_id];
     if(_current_room_id) [_zego logoutRoom:_current_room_id];
     if(_is_video_call){
-        [_captureDevice stopCapture]; //停止摄像头
+        [_zego enableCamera:NO];
         [_zego stopPreview: ZegoPublishChannelMain]; //停止预览
         _hasSwitchView = NO;
         [_mineView removeFromSuperview];
@@ -253,27 +459,25 @@
     NSDictionary *options = [command.arguments objectAtIndex: 0];
     int position = [[options valueForKey:@"position"] intValue];
     if(position == 0){
-        [_captureDevice setZegoCameraPosition:AVCaptureDevicePositionFront];
+        [_zego useFrontCamera:YES];
     }else{
-        [_captureDevice setZegoCameraPosition:AVCaptureDevicePositionBack];
+        [_zego useFrontCamera:NO];
     }
     [self send_event:command withMessage:@{@"result":@"ok"} Alive:NO State:YES];
 }
 
 -(void) switchCamera:(CDVInvokedUrlCommand *)command
 {
-    [_captureDevice switchCameraPosition];
+//    [_captureDevice switchCameraPosition];
     [self send_event:command withMessage:@{@"result":@"ok"} Alive:NO State:YES];
 }
 -(void) closeCamera:(CDVInvokedUrlCommand *)command
 {
-    [_captureDevice stopCapture];
     [_zego enableCamera:NO];
     [self send_event:command withMessage:@{@"result":@"ok"} Alive:NO State:YES];
 }
 -(void) openCamera:(CDVInvokedUrlCommand *)command
 {
-    [_captureDevice startCapture];
     [_zego enableCamera:YES];
     [self send_event:command withMessage:@{@"result":@"ok"} Alive:NO State:YES];
 }
@@ -510,24 +714,6 @@
 
 - (void)showTopView:(BOOL)shown {}
 
-#pragma mark ZGCaptureDeviceDataOutputPixelBufferDelegate
-
-- (void)onStart:(ZegoPublishChannel)channel {
-    [self.captureDevice startCapture];
-}
-
-- (void)onStop:(ZegoPublishChannel)channel {
-    [self.captureDevice stopCapture];
-}
-
-- (void)captureDevice:(id<ZGCaptureDevice>)device didCapturedData:(CMSampleBufferRef)data {
-    // BufferType: CVPixelBuffer
-    CVPixelBufferRef buffer = CMSampleBufferGetImageBuffer(data);
-    CMTime timeStamp = CMSampleBufferGetPresentationTimeStamp(data);
-    CVPixelBufferRef fuBuffer = [[FUManager shareManager] renderItemsToPixelBuffer:buffer];
-    [[ZegoExpressEngine sharedEngine] sendCustomVideoCapturePixelBuffer:fuBuffer timestamp:timeStamp];
-}
-
 
 #pragma mark ZegoCustomVideoCaptureHandler
 #pragma mark Room Event
@@ -696,13 +882,15 @@
         NSMutableDictionary *dictBeauty = [[NSMutableDictionary alloc] initWithContentsOfURL:pathUrl error:&err];
         if(err.code == 0){
             for(int i=0;i<[[FUManager shareManager].shapeParams count];i++){
-                [FUManager shareManager].shapeParams[i].mValue = [[dictBeauty valueForKey:[FUManager shareManager].shapeParams[i].mParam] floatValue];
+                NSString * key = [FUManager shareManager].shapeParams[i].mParam;
+                NSLog(@"[CDVLive] set key %@", key);
+                [[FURenderKit shareRenderKit].beauty setValue:@([[dictBeauty valueForKey:key] floatValue]) forKey:key];
             }
         }else{
             NSLog(@"[CDVLive]Open file fail: %ld",(long)err.code);
         }
     } else {
-        NSLog(@"[CDVLive]The file not found");
+        NSLog(@"[CDVLive]The shape file not found");
     }
 }
 - (void)load_beauty_skin_from_file{
@@ -714,13 +902,15 @@
         NSMutableDictionary *dictBeauty = [[NSMutableDictionary alloc] initWithContentsOfURL:pathUrl error:&err];
         if(err.code == 0){
             for(int i=0;i<[[FUManager shareManager].skinParams count];i++){
-                [FUManager shareManager].skinParams[i].mValue = [[dictBeauty valueForKey:[FUManager shareManager].skinParams[i].mParam] floatValue];
+                NSString * key = [FUManager shareManager].skinParams[i].mParam;
+                [[FURenderKit shareRenderKit].beauty setValue:@([[dictBeauty valueForKey:key] floatValue]) forKey:key];
+//                [FUManager shareManager].skinParams[i].mValue = [[dictBeauty valueForKey:[FUManager shareManager].skinParams[i].mParam] floatValue];
             }
         }else{
             NSLog(@"[CDVLive]Open file fail: %ld",(long)err.code);
         }
     } else {
-        NSLog(@"[CDVLive]The file not found");
+        NSLog(@"[CDVLive]The skin file not found");
     }
 }
 
@@ -755,9 +945,9 @@
 
 - (void)setDefaultFilter:(FUBeautyParam *)modle
 {
-    int handle = [[FUManager shareManager] getHandleAboutType:FUNamaHandleTypeBeauty];
-    [FURenderer itemSetParam:handle withName:@"filter_name" value:[modle.mParam lowercaseString]];
-    [FURenderer itemSetParam:handle withName:@"filter_level" value:@(modle.mValue)]; //滤镜程度
+    [FUManager shareManager].beauty.filterName = [modle.mParam lowercaseString];
+    [FUManager shareManager].beauty.filterLevel = modle.mValue;
+    [FURenderKit shareRenderKit].beauty = [FUManager shareManager].beauty;
     [FUManager shareManager].seletedFliter = modle;
 }
 
