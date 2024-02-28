@@ -81,7 +81,8 @@
 
     [_zego enableHardwareDecoder:YES];
     [_zego enableHardwareEncoder:YES];
-    [_zego setLowlightEnhancement:ZegoLowlightEnhancementModeOn channel:ZegoPublishChannelMain];
+    
+    [_zego setLowlightEnhancement:ZegoLowlightEnhancementModeAuto channel:ZegoPublishChannelMain];
 
 
     _minWindowHeight = [UIScreen mainScreen].bounds.size.height * 0.2;
@@ -303,12 +304,20 @@
 -(void)snapshot:(CDVInvokedUrlCommand *)command
 {
     if(_live_command){
-        NSData *imageData = UIImageJPEGRepresentation([self imageFromView: _mineView ], 0.8);
-        NSURL *tmpDirURL = [NSURL fileURLWithPath:NSTemporaryDirectory() isDirectory:YES];
-        NSURL *fileURL = [[tmpDirURL URLByAppendingPathComponent:[[NSUUID UUID] UUIDString]] URLByAppendingPathExtension:@"jpg"];
-        [imageData writeToURL:fileURL atomically:YES];
-        imageData = nil;
-        [self send_event: _live_command withMessage:@{@"event":@"screen",@"path":[fileURL path]} Alive:YES State:YES];
+        [_zego takePublishStreamSnapshot:^(int errorCode, ZGImage * _Nullable image) {
+            NSData *imageData  = UIImageJPEGRepresentation(image, 0.8);
+            NSString *base64str =  [imageData base64EncodedStringWithOptions:NSDataBase64Encoding64CharacterLineLength];
+            imageData = nil;
+            [self send_event: self->_live_command withMessage:@{@"event":@"screen",@"base64":base64str} Alive:YES State:YES];
+        }];
+//        
+//        
+//        NSData *imageData = UIImageJPEGRepresentation([self imageFromView: _mineView ], 0.8);
+//        NSURL *tmpDirURL = [NSURL fileURLWithPath:NSTemporaryDirectory() isDirectory:YES];
+//        NSURL *fileURL = [[tmpDirURL URLByAppendingPathComponent:[[NSUUID UUID] UUIDString]] URLByAppendingPathExtension:@"jpg"];
+//        [imageData writeToURL:fileURL atomically:YES];
+//        imageData = nil;
+//        [self send_event: _live_command withMessage:@{@"event":@"screen",@"path":[fileURL path]} Alive:YES State:YES];
     }
 }
 
@@ -536,7 +545,7 @@
 #pragma mark ZegoCustomVideoCaptureHandler
 #pragma mark Room Event
 - (void)onRoomStateUpdate:(ZegoRoomState)state errorCode:(int)errorCode extendedData:(NSDictionary *)extendedData roomID:(NSString *)roomID {
-    [self send_event:_live_command withMessage:@{@"event":@"onRoomStateUpdate",@"state":@(state)} Alive:YES State:YES];
+    [self send_event:_live_command withMessage:@{@"event":@"onRoomStateUpdate",@"state":@(state),@"errorCode":@(errorCode)} Alive:YES State:YES];
 }
 
 - (void)onRoomUserUpdate:(ZegoUpdateType)updateType userList:(NSArray<ZegoUser *> *)userList roomID:(NSString *)roomID {
