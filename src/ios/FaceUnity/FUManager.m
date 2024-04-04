@@ -144,9 +144,9 @@ static int oldHandle = 0;
 -(void)filterValueChange:(FUBeautyParam *)param{
     NSLog(@" %@ = %f %lu",param.mParam, param.mValue, (unsigned long)param.type);
    if (param.type == FUDataTypeBeautify) {
-       if ([param.mParam isEqualToString:@"cheek_narrow"] || [param.mParam isEqualToString:@"cheek_small"]){//程度值 只去一半
+       if ([param.mParam isEqualToString:@"cheekNarrow"] || [param.mParam isEqualToString:@"cheekSmall"]){//程度值 只去一半
            [[FURenderKit shareRenderKit].beauty setValue:@(param.mValue * 0.5) forKey:param.mParam];
-       }else if([param.mParam isEqualToString:@"blur_level"]) {//磨皮 0~6
+       }else if([param.mParam isEqualToString:@"blurLevel"]) {//磨皮 0~6
            [[FURenderKit shareRenderKit].beauty setValue:@(param.mValue * 6) forKey:param.mParam];
        }else{
            [[FURenderKit shareRenderKit].beauty setValue:@(param.mValue) forKey:param.mParam];
@@ -167,7 +167,7 @@ static int oldHandle = 0;
 
 - (void)setBeautyParameters{
    for (FUBeautyParam *modle in _skinParams){
-        if ([modle.mParam isEqualToString:@"blur_level"]) {
+        if ([modle.mParam isEqualToString:@"blurLevel"]) {
             [[FURenderKit shareRenderKit].beauty setValue:@(modle.mValue * 6) forKey:modle.mParam];
         }else{
             [[FURenderKit shareRenderKit].beauty setValue:@(modle.mValue) forKey:modle.mParam];
