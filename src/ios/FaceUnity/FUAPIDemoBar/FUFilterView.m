@@ -16,13 +16,15 @@
 
 @implementation FUFilterView
 
+
 -(void)awakeFromNib{
+    [super awakeFromNib];
     self.backgroundColor = [UIColor clearColor];
     self.delegate = self;
     self.dataSource = self ;
     [self registerClass:[FUFilterCell class] forCellWithReuseIdentifier:@"FUFilterCell"];
-    
-    _selectedIndex = 0 ;
+    NSLog(@"FUFilterView awakeFromNib");
+    if(!_selectedIndex) _selectedIndex = 0 ;
 }
 
 -(void)setType:(FUFilterViewType)type {
@@ -32,14 +34,15 @@
 
 -(void)setSelectedIndex:(NSInteger)selectedIndex {
     _selectedIndex = selectedIndex ;
+    NSLog(@"[CDVLive]setSelectedIndex %lu",_selectedIndex);
     [self reloadData];
 }
 
 -(void)setDefaultFilter:(FUBeautyParam *)filter{
     for (int i = 0; i < _filters.count; i ++) {
         FUBeautyParam *model = _filters[i];
-        NSLog(@"%@ == %@",model.mParam , filter.mParam);
-        if ([model.mParam isEqual: filter.mParam]) {
+        NSLog(@"[CDVLive]%@ == %@",model.mParam , filter.mParam);
+        if ([model.mParam isEqualToString: filter.mParam]) {
             self.selectedIndex = i;
             [self reloadData];
             return;
@@ -54,8 +57,7 @@
     return self.filters.count;
 }
 
-- (__kindof UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath {
-    
+- (UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath {
     
     FUFilterCell *cell = (FUFilterCell *)[collectionView dequeueReusableCellWithReuseIdentifier:@"FUFilterCell" forIndexPath:indexPath];
     
@@ -74,7 +76,7 @@
         cell.imageView.layer.borderColor = [UIColor colorWithHexColorString:@"5EC7FE"].CGColor;
         cell.titleLabel.textColor = [UIColor colorWithHexColorString:@"5EC7FE"];
     }
-    
+    NSLog(@"[CDVLive]collectionView %lu ",_selectedIndex);
     return cell ;
 }
 

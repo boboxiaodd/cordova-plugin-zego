@@ -27,8 +27,10 @@
 @property (nonatomic,readwrite) NSString * current_room_id;
 @property (nonatomic,readwrite) NSString * play_stream_id;
 @property (nonatomic,strong) UIView * mineView;
+@property (nonatomic,strong) UIVisualEffectView * mineVisualView;
 @property (nonatomic,strong) UILabel * mineViewText;
 @property (nonatomic,strong) UIView * playView;
+@property (nonatomic,strong) UIVisualEffectView * playVisualView;
 @property (nonatomic,strong) UILabel * playViewText;
 @property (nonatomic,readwrite) CGFloat minWindowHeight;
 @property (nonatomic,readwrite) CGFloat minWindowWidth;
@@ -63,43 +65,46 @@
 #pragma mark Cordova接口
 - (void)pluginInitialize
 {
-   
-    
+    _minWindowHeight = [UIScreen mainScreen].bounds.size.height * 0.2;
+    _minWindowWidth = [UIScreen mainScreen].bounds.size.width * 0.2;
 }
 -(void)initZego:(CDVInvokedUrlCommand *)command
 {
-    NSLog(@"--------------- init CDVZegoLive start --------");
-    if(_zego) {
+    dispatch_async(dispatch_get_global_queue(0, 0), ^{
+        NSLog(@"--------------- init CDVZegoLive start --------");
+        if(self->_zego) {
+            [self send_event:command withMessage:@{@"result":@"ok"} Alive:NO State:YES];
+            return;
+        }
+
+        ZegoEngineProfile * profile = [ZegoEngineProfile new];
+        profile.appID = [[self settingForKey:@"zego.appid"] intValue];
+
+        self->_zego = [ZegoExpressEngine createEngineWithProfile:profile eventHandler:self];
+
+        [self->_zego enableHardwareDecoder:YES];
+        [self->_zego enableHardwareEncoder:YES];
+        
+        [self->_zego setLowlightEnhancement:ZegoLowlightEnhancementModeAuto channel:ZegoPublishChannelMain];
+
+        
+        [FUManager shareManager].isRender = YES;
+        
+        ZegoCustomVideoProcessConfig *config = [[ZegoCustomVideoProcessConfig alloc] init];
+        config.bufferType = ZegoVideoBufferTypeCVPixelBuffer;
+        [self->_zego enableCustomVideoProcessing:YES config:config];
+        [self->_zego setCustomVideoProcessHandler: self];
+        
+        [self load_beauty_skin_from_file];
+        [self load_beauty_shape_from_file];
+        [self load_beauty_filter_from_file];
+        
+        NSLog(@"--------------- init CDVZegoLive filished --------");
+        
         [self send_event:command withMessage:@{@"result":@"ok"} Alive:NO State:YES];
-        return;
-    }
-
-    ZegoEngineProfile * profile = [ZegoEngineProfile new];
-    profile.appID = [[self settingForKey:@"zego.appid"] intValue];
-
-    _zego = [ZegoExpressEngine createEngineWithProfile:profile eventHandler:self];
-
-    [_zego enableHardwareDecoder:YES];
-    [_zego enableHardwareEncoder:YES];
-    
-    [_zego setLowlightEnhancement:ZegoLowlightEnhancementModeAuto channel:ZegoPublishChannelMain];
-
-
-    _minWindowHeight = [UIScreen mainScreen].bounds.size.height * 0.2;
-    _minWindowWidth = [UIScreen mainScreen].bounds.size.width * 0.2;
-
-    
-    [FUManager shareManager].isRender = YES;
-    
-    ZegoCustomVideoProcessConfig *config = [[ZegoCustomVideoProcessConfig alloc] init];
-    config.bufferType = ZegoVideoBufferTypeCVPixelBuffer;
-    [_zego enableCustomVideoProcessing:YES config:config];
-    [_zego setCustomVideoProcessHandler: self];
-    
-    NSLog(@"--------------- init CDVZegoLive filished --------");
-    
-    [self send_event:command withMessage:@{@"result":@"ok"} Alive:NO State:YES];
+    });
 }
+
 
 -(void)playRingtone:(CDVInvokedUrlCommand *)command
 {
@@ -176,22 +181,46 @@
 {
     NSDictionary *options = [command.arguments objectAtIndex: 0];
     NSString *text = [options valueForKey:@"text"];
-    if([text isEqualToString:@""]){
-        [_mineViewText setHidden:YES];
+    BOOL showBlur = [[options valueForKey:@"showBlur"] boolValue];
+    if(showBlur){
+        if([text isEqualToString:@""]){
+            [_mineVisualView setHidden:YES];
+            [_mineViewText setHidden:YES];
+        }else{
+            [_mineVisualView setHidden:NO];
+            [_mineViewText setHidden:NO];
+            [_mineViewText setText:text];
+        }
     }else{
-        [_mineViewText setText:text];
-        [_mineViewText setHidden:NO];
+        if([text isEqualToString:@""]){
+            [_mineViewText setHidden:YES];
+        }else{
+            [_mineViewText setText:text];
+            [_mineViewText setHidden:NO];
+        }
     }
 }
 -(void) setPlayViewText:(CDVInvokedUrlCommand *)command
 {
     NSDictionary *options = [command.arguments objectAtIndex: 0];
     NSString *text = [options valueForKey:@"text"];
-    if([text isEqualToString:@""]){
-        [_playViewText setHidden:YES];
+    BOOL showBlur = [[options valueForKey:@"showBlur"] boolValue];
+    if(showBlur){
+        if([text isEqualToString:@""]){
+            [_playVisualView setHidden:YES];
+            [_playViewText setHidden:YES];
+        }else{
+            [_playVisualView setHidden:NO];
+            [_playViewText setHidden:NO];
+            [_playViewText setText:text];
+        }
     }else{
-        [_playViewText setText:text];
-        [_playViewText setHidden:NO];
+        if([text isEqualToString:@""]){
+            [_playViewText setHidden:YES];
+        }else{
+            [_playViewText setText:text];
+            [_playViewText setHidden:NO];
+        }
     }
 }
 
@@ -205,6 +234,14 @@
     _rootVC.webView.opaque = false;
     //创建拉流view
     _playView = [[UIView alloc] initWithFrame:UIScreen.mainScreen.bounds];
+    UIBlurEffect *blurEffect = [UIBlurEffect effectWithStyle:UIBlurEffectStyleLight];
+    
+    //增加模糊层
+    _playVisualView = [[UIVisualEffectView alloc] initWithEffect:blurEffect];
+    _playVisualView.frame = _playView.frame;
+    [_playVisualView setHidden:YES];
+    [_playView addSubview:_playVisualView];
+    
     _playViewText  = [[UILabel alloc] initWithFrame: CGRectMake(0, 0, _playView.frame.size.width, _playView.frame.size.height)];
     _playViewText.backgroundColor = [self colorWithHex:0x000000 alpha:0.3];
     _playViewText.font = [UIFont systemFontOfSize:12.0];
@@ -219,6 +256,13 @@
     CGSize size = [UIScreen mainScreen].bounds.size;
     CGFloat safeTop =  UIApplication.sharedApplication.keyWindow.safeAreaInsets.top;
     _mineView = [[UIView alloc] initWithFrame:CGRectMake(size.width - _minWindowWidth - 8, safeTop + 8, _minWindowWidth, _minWindowHeight)];
+    
+    //增加模糊层
+    _mineVisualView = [[UIVisualEffectView alloc] initWithEffect:blurEffect];
+    _mineVisualView.frame = CGRectMake(0, 0, _mineView.frame.size.width, _mineView.frame.size.height);
+    [_mineVisualView setHidden:YES];
+    [_mineView addSubview:_mineVisualView];
+    
     _mineViewText  = [[UILabel alloc] initWithFrame: CGRectMake(0, 0, _mineView.frame.size.width, _mineView.frame.size.height)];
     _mineViewText.backgroundColor = [self colorWithHex:0x000000 alpha:0.3];
     _mineViewText.font = [UIFont systemFontOfSize:12.0];
@@ -381,10 +425,10 @@
         bottonView.backgroundColor = [UIColor colorWithRed:0 green:0 blue:0 alpha:0.6];
         [_beautyView addSubview:bottonView];
 
-        [_demoBar reloadShapView:[FUManager shareManager].shapeParams];
-        [_demoBar reloadSkinView:[FUManager shareManager].skinParams];
-        [_demoBar reloadFilterView:[FUManager shareManager].filters];
-        [_demoBar setDefaultFilter:[FUManager shareManager].seletedFliter];
+//        [_demoBar reloadShapView:[FUManager shareManager].shapeParams];
+//        [_demoBar reloadSkinView:[FUManager shareManager].skinParams];
+//        [_demoBar reloadFilterView:[FUManager shareManager].filters];
+//        [_demoBar setDefaultFilter:[FUManager shareManager].seletedFliter];
         [_demoBar.skinBtn sendActionsForControlEvents:UIControlEventTouchUpInside];
         [UIView animateWithDuration: 0.3 animations: ^(void){
             CGRect f = self.beautyView.frame;
@@ -489,11 +533,14 @@
     if(!_hasSwitchView){
         [_mineView removeGestureRecognizer:self.panGesture];
         [_mineView removeGestureRecognizer:self.switchGesture];
+        
         [_playView setFrame:CGRectMake(size.width - _minWindowWidth - 8, safeTop + 8, _minWindowWidth, _minWindowHeight)];
         [_playViewText setFrame:CGRectMake(0, 0, _minWindowWidth, _minWindowHeight)];
+        [_playVisualView setFrame:CGRectMake(0,0, _minWindowWidth, _minWindowHeight)];
 
         [_mineView setFrame:UIScreen.mainScreen.bounds];
         [_mineViewText setFrame:UIScreen.mainScreen.bounds];
+        [_mineVisualView setFrame:UIScreen.mainScreen.bounds];
 
         [_rootVC.webView.superview bringSubviewToFront:_rootVC.webView];
         [_playView.superview bringSubviewToFront:_playView];
@@ -506,9 +553,11 @@
         [_playView removeGestureRecognizer:self.switchGesture];
         [_mineView setFrame:CGRectMake(size.width - _minWindowWidth - 8, safeTop + 8, _minWindowWidth, _minWindowHeight)];
         [_mineViewText setFrame:CGRectMake(0, 0, _minWindowWidth, _minWindowHeight)];
+        [_mineVisualView setFrame:CGRectMake(0, 0, _minWindowWidth, _minWindowHeight)];
 
         [_playView setFrame:UIScreen.mainScreen.bounds];
         [_playViewText setFrame:UIScreen.mainScreen.bounds];
+        [_playVisualView setFrame:UIScreen.mainScreen.bounds];
 
         [_rootVC.webView.superview bringSubviewToFront:_rootVC.webView];
         [_mineView.superview bringSubviewToFront:_mineView];
@@ -650,10 +699,10 @@
     NSURL *docDir = [[[NSFileManager defaultManager] URLsForDirectory:NSLibraryDirectory inDomains:NSUserDomainMask] lastObject];
     NSURL *pathUrl = [docDir URLByAppendingPathComponent: BEAUTY_SHAPE_FILE];
     NSError *err;
-    NSMutableArray *dat = [FUManager shareManager].shapeParams;
+    NSArray *dat = [FUManager shareManager].shapeParams;
     NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:[dat count]];
     for (FUBeautyParam * item in dat) {
-        [message setObject:@(item.mValue) forKey:item.mParam];
+        [message setObject:[[FURenderKit shareRenderKit].beauty valueForKey:item.mParam] forKey:item.mParam];
     }
     [message writeToURL:pathUrl error:&err];
     if(err.code != 0){
@@ -668,10 +717,10 @@
     NSURL *docDir = [[[NSFileManager defaultManager] URLsForDirectory:NSLibraryDirectory inDomains:NSUserDomainMask] lastObject];
     NSURL *pathUrl = [docDir URLByAppendingPathComponent: BEAUTY_SKIN_FILE];
     NSError *err;
-    NSMutableArray *dat = [FUManager shareManager].skinParams;
+    NSArray *dat = [FUManager shareManager].skinParams;
     NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:[dat count]];
     for (FUBeautyParam * item in dat) {
-        [message setObject:@(item.mValue) forKey:item.mParam];
+        [message setObject:[[FURenderKit shareRenderKit].beauty valueForKey:item.mParam] forKey:item.mParam];
     }
     [message writeToURL:pathUrl error:&err];
     if(err.code != 0){
@@ -704,40 +753,44 @@
     NSURL *docDir = [[[NSFileManager defaultManager] URLsForDirectory:NSLibraryDirectory inDomains:NSUserDomainMask] lastObject];
     NSURL *pathUrl = [docDir URLByAppendingPathComponent: BEAUTY_SHAPE_FILE];
     if ([[NSFileManager defaultManager]fileExistsAtPath: pathUrl.path isDirectory: FALSE]) {
-        NSLog(@"[CDVLive]The file found!");
+        NSLog(@"[CDVLive]Shape The file found!");
         NSError *err;
         NSMutableDictionary *dictBeauty = [[NSMutableDictionary alloc] initWithContentsOfURL:pathUrl error:&err];
         if(err.code == 0){
             for(int i=0;i<[[FUManager shareManager].shapeParams count];i++){
                 NSString * key = [FUManager shareManager].shapeParams[i].mParam;
-                NSLog(@"[CDVLive] set key %@", key);
+                NSLog(@"[CDVLive] set key %@ = %f", key,[[dictBeauty valueForKey:key] floatValue]);
                 [[FURenderKit shareRenderKit].beauty setValue:@([[dictBeauty valueForKey:key] floatValue]) forKey:key];
             }
         }else{
             NSLog(@"[CDVLive]Open file fail: %ld",(long)err.code);
+            [[FUManager shareManager] initShapeParams];
         }
     } else {
         NSLog(@"[CDVLive]The shape file not found");
+        [[FUManager shareManager] initShapeParams];
     }
 }
 - (void)load_beauty_skin_from_file{
     NSURL *docDir = [[[NSFileManager defaultManager] URLsForDirectory:NSLibraryDirectory inDomains:NSUserDomainMask] lastObject];
     NSURL *pathUrl = [docDir URLByAppendingPathComponent: BEAUTY_SKIN_FILE];
     if ([[NSFileManager defaultManager]fileExistsAtPath: pathUrl.path isDirectory: FALSE]) {
-        NSLog(@"[CDVLive]The file found!");
+        NSLog(@"[CDVLive]Skin The file found!");
         NSError *err;
         NSMutableDictionary *dictBeauty = [[NSMutableDictionary alloc] initWithContentsOfURL:pathUrl error:&err];
         if(err.code == 0){
             for(int i=0;i<[[FUManager shareManager].skinParams count];i++){
                 NSString * key = [FUManager shareManager].skinParams[i].mParam;
+                NSLog(@"[CDVLive]Set beauty %@ = %f",key,[[dictBeauty valueForKey:key] floatValue]);
                 [[FURenderKit shareRenderKit].beauty setValue:@([[dictBeauty valueForKey:key] floatValue]) forKey:key];
-//                [FUManager shareManager].skinParams[i].mValue = [[dictBeauty valueForKey:[FUManager shareManager].skinParams[i].mParam] floatValue];
             }
         }else{
             NSLog(@"[CDVLive]Open file fail: %ld",(long)err.code);
+            [[FUManager shareManager] initSkinParams];
         }
     } else {
-        NSLog(@"[CDVLive]The skin file not found");
+        NSLog(@"[CDVLive]The skin file not found , use default params...");
+        [[FUManager shareManager] initSkinParams];
     }
 }
 
@@ -745,38 +798,30 @@
     NSURL *docDir = [[[NSFileManager defaultManager] URLsForDirectory:NSLibraryDirectory inDomains:NSUserDomainMask] lastObject];
     NSURL *pathUrl = [docDir URLByAppendingPathComponent: BEAUTY_FILTER_FILE];
     if ([[NSFileManager defaultManager]fileExistsAtPath: pathUrl.path isDirectory: FALSE]) {
-        NSLog(@"[CDVLive]The file found!");
+        NSLog(@"[CDVLive]Filter The file found!");
         NSError *err;
         NSMutableDictionary *dictBeauty = [[NSMutableDictionary alloc] initWithContentsOfURL:pathUrl error:&err];
         if(err.code == 0){
-            FUBeautyParam *modle = [[FUBeautyParam alloc] init];
-            modle.mParam = [dictBeauty valueForKey:@"mParam"];
-            modle.mTitle = [dictBeauty valueForKey:@"mTitle"];
-            modle.mValue = [[[NSString alloc] initWithFormat:@"%1f",[[dictBeauty valueForKey:@"mValue"] floatValue]] floatValue];
-            modle.type = FUDataTypeFilter;
-            [self setDefaultFilter:modle];
-            NSLog(@"load filter from file: %@",modle.mTitle);
+            [[FURenderKit shareRenderKit].beauty setFilterName: [dictBeauty valueForKey:@"mParam"]];
+            [[FURenderKit shareRenderKit].beauty setFilterLevel: [[dictBeauty valueForKey:@"mValue"] floatValue]];
+            NSLog(@"[CDVLive]set filter from file: %@ =  %f",[dictBeauty valueForKey:@"mParam"],[[dictBeauty valueForKey:@"mValue"] floatValue]);
         }else{
             NSLog(@"[CDVLive]Open file fail: %ld",(long)err.code);
+            [[FUManager shareManager] initFilterParams];
         }
     } else {
-        FUBeautyParam *modle = [[FUBeautyParam alloc] init];
-        modle.mParam = @"fennen1";
-        modle.mTitle = @"粉嫩1";
-        modle.mValue = 0.4;
-        modle.type = FUDataTypeFilter;
-        [self setDefaultFilter:modle];
+        [[FUManager shareManager] initFilterParams];
         NSLog(@"[CDVLive]The file not found");
     }
 }
 
-- (void)setDefaultFilter:(FUBeautyParam *)modle
-{
-    [FUManager shareManager].beauty.filterName = [modle.mParam lowercaseString];
-    [FUManager shareManager].beauty.filterLevel = modle.mValue;
-    [FURenderKit shareRenderKit].beauty = [FUManager shareManager].beauty;
-    [FUManager shareManager].seletedFliter = modle;
-}
+//- (void)setDefaultFilter:(FUBeautyParam *)modle
+//{
+//    [FUManager shareManager].beauty.filterName = [modle.mParam lowercaseString];
+//    [FUManager shareManager].beauty.filterLevel = modle.mValue;
+//    [FURenderKit shareRenderKit].beauty = [FUManager shareManager].beauty;
+//    [FUManager shareManager].seletedFliter = modle;
+//}
 
 #pragma mark 公共方法
 

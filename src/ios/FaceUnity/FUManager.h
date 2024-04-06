@@ -38,11 +38,11 @@ typedef NS_ENUM(NSUInteger, FUNamaHandleType) {
 
 
 /* 滤镜参数 */
-@property (nonatomic, strong) NSMutableArray<FUBeautyParam *> *filters;
+@property (nonatomic, strong) NSArray<FUBeautyParam *> *filters;
 /* 美肤参数 */
-@property (nonatomic, strong) NSMutableArray<FUBeautyParam *> *skinParams;
+@property (nonatomic, strong) NSArray<FUBeautyParam *> *skinParams;
 /* 美型参数 */
-@property (nonatomic, strong) NSMutableArray<FUBeautyParam *> *shapeParams;
+@property (nonatomic, strong) NSArray<FUBeautyParam *> *shapeParams;
 
 /** 选中的滤镜 */
 @property (nonatomic, strong) FUBeautyParam *seletedFliter;
@@ -70,6 +70,11 @@ typedef NS_ENUM(NSUInteger, FUNamaHandleType) {
 
 - (void)loadFilter;
 
+- (void)initSkinParams;
+- (void)initShapeParams;
+- (void)initFilterParams;
+
+- (void)setBeautyParameters;
 
 -(void)setRenderType:(FUDataType)dateType;
 

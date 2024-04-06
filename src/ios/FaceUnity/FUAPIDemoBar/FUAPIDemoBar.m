@@ -44,6 +44,8 @@
 /* 当前选中参数 */
 @property (strong, nonatomic) FUBeautyParam *seletedParam;
 
+@property (nonatomic, assign) NSInteger selectedIndex ;
+
 
 /* 滤镜参数 */
 @property (nonatomic, strong) NSArray<FUBeautyParam *> *filtersParams;
@@ -79,27 +81,8 @@
     [self reloadShapView:_shapeParams];
     [self reloadSkinView:_skinParams];
     [self reloadFilterView:_filtersParams];
-    FUBeautyParam *item = [FUManager shareManager].seletedFliter;
-    [_beautyFilterView setDefaultFilter:item];
-    
-//    _makeupView.filters = _makeupParams;
-//    [_makeupView setDefaultFilter:_makeupParams[0]];
-//    [_makeupView reloadData];
-    
-//    _stickerView.filters = _stickerParams;
-//    [_makeupView setDefaultFilter:_stickerParams[0]];
-//    [_stickerView reloadData];
-    
-//    _bodyView.dataArray = _bodyParams;
-//    [_makeupView setDefaultFilter:_bodyParams[0]];
-//    _bodyView.selectedIndex = 1;
-//    [_bodyView reloadData];
-    
-//    self.stickerView.mDelegate = self ;
-//    self.makeupView.mDelegate = self;
+
     self.beautyFilterView.mDelegate = self ;
-    
-//    self.bodyView.mDelegate = self;
     self.shapeView.mDelegate = self ;
     self.skinView.mDelegate = self;
     
@@ -110,19 +93,50 @@
     self.skinBtn.tag = 101;
     self.shapeBtn.tag = 102;
     self.beautyFilterBtn.tag = 103 ;
-//    self.stickerBtn.tag = 104;
-//    self.makeupBtn.tag = 105;
-//    self.bodyBtn.tag = 106;
     
 }
 
 -(void)setupDate{
-    _filtersParams = [FUDateHandle setupFilterData];
-    _shapeParams  = [FUDateHandle setupShapData];
-     _skinParams = [FUDateHandle setupSkinData];
-     _stickerParams = [FUDateHandle setupSticker];
-     _makeupParams = [FUDateHandle setupMakeupData];
-    _bodyParams  = [FUDateHandle setupBodyData];
+    NSMutableArray *tempFilterArray = [[FUDateHandle setupFilterData] mutableCopy];
+    self.selectedIndex = 0;
+    for(int i=0;i<tempFilterArray.count;i++){
+        FUBeautyParam *item  = tempFilterArray[i];
+        if([item.mParam isEqualToString: [FURenderKit shareRenderKit].beauty.filterName]){
+            self.selectedIndex = i;
+            item.mValue = [FURenderKit shareRenderKit].beauty.filterLevel;
+        }
+        tempFilterArray[i] = item;
+        NSLog(@"[CDVLive]setup data %@ = %f",item.mParam,item.mValue);
+    }
+    
+    _filtersParams = tempFilterArray;
+    
+
+    NSMutableArray *tempShapeArray = [[FUDateHandle setupShapData] mutableCopy];
+    for(int i=0;i<tempShapeArray.count;i++){
+        FUBeautyParam *item  = tempShapeArray[i];
+        if([item.mParam isEqualToString:@"cheekNarrow"] || [item.mParam isEqualToString:@"cheekSmall"]){
+            item.mValue = [[[FURenderKit shareRenderKit].beauty valueForKey:item.mParam] floatValue] * 2;
+        }else{
+            item.mValue = [[[FURenderKit shareRenderKit].beauty valueForKey:item.mParam] floatValue];
+        }
+        tempShapeArray[i] = item;
+        NSLog(@"[CDVLive]setup data %@ = %f",item.mParam,item.mValue);
+    }
+    _shapeParams = tempShapeArray;
+    
+    NSMutableArray *tempSkinArray = [[FUDateHandle setupSkinData] mutableCopy];
+    for(int i=0;i<tempSkinArray.count;i++){
+        FUBeautyParam *item  = tempSkinArray[i];
+        if([item.mParam isEqualToString:@"blurLevel"]){
+            item.mValue = [[[FURenderKit shareRenderKit].beauty valueForKey:item.mParam] floatValue] / 6;
+        }else{
+            item.mValue = [[[FURenderKit shareRenderKit].beauty valueForKey:item.mParam] floatValue];
+        }
+        tempSkinArray[i] = item;
+        NSLog(@"[CDVLive]setup data %@ = %f",item.mParam,item.mValue);
+    }
+    _skinParams = tempSkinArray;
 }
 
 -(void)layoutSubviews{
@@ -134,40 +148,20 @@
     self.shapeBtn.selected = NO;
     self.beautyFilterBtn.selected = NO;
     
-//    self.stickerBtn.selected = NO;
-//    self.makeupBtn.selected = NO;
-//    self.bodyBtn.selected = NO;
-    
-    
     self.skinView.hidden = YES;
     self.shapeView.hidden = YES ;
     self.beautyFilterView.hidden = YES;
-    
-//    self.makeupView.hidden = YES;
-//    self.stickerView.hidden = YES;
-//    self.bodyView.hidden = YES;
-    
     sender.selected = YES;
     
     if (sender == self.skinBtn) {
         self.skinView.hidden = NO;
     }
-//    if (sender == self.stickerBtn) {
-//        self.stickerView.hidden = NO;
-//
-//    }
-//    if (sender == self.makeupBtn) {
-//        self.makeupView.hidden = NO;
-//    }
     if (sender == self.beautyFilterBtn) {
         self.beautyFilterView.hidden = NO;
     }
     if (sender == self.shapeBtn) {
         self.shapeView.hidden = NO;
     }
-//    if (sender == self.bodyBtn) {
-//        self.bodyView.hidden = NO;
-//    }
 }
 
 
@@ -213,39 +207,6 @@
             self.beautySlider.value = modle.mValue;
         }
     }
-    
-//    if (self.stickerBtn.selected) {
-//        NSInteger selectedIndex = self.stickerView.selectedIndex ;
-//        self.beautySlider.hidden = YES;
-//        if (selectedIndex >= 0) {
-//            FUBeautyParam *modle = self.beautyFilterView.filters[selectedIndex];
-//            _seletedParam = modle;
-//        }
-//    }
-    
-    
-//    if (self.makeupBtn.selected) {
-//        NSInteger selectedIndex = self.makeupView.selectedIndex ;
-//        self.makeupView.type = FUFilterSliderType01 ;
-//        self.beautySlider.hidden = selectedIndex <= 0;
-//        if (selectedIndex >= 0) {
-//            FUBeautyParam *modle = self.makeupView.filters[selectedIndex];
-//            _seletedParam = modle;
-//            self.beautySlider.value = modle.mValue;
-//        }
-//    }
-//
-//    if (self.bodyBtn.selected) {
-//        NSInteger selectedIndex = self.bodyView.selectedIndex;
-//        self.beautySlider.hidden = selectedIndex < 0 ;
-//
-//        if (selectedIndex >= 0) {
-//            FUBeautyParam *modle = self.bodyView.dataArray[selectedIndex];
-//            _seletedParam = modle;
-//            self.beautySlider.value = modle.mValue;
-//        }
-//    }
-    
     
     [self showTopViewWithAnimation:self.topView.isHidden];
     [self setSliderTyep:_seletedParam];
@@ -384,6 +345,9 @@
 }
 
 -(void)reloadSkinView:(NSArray<FUBeautyParam *> *)skinParams{
+    if([skinParams[1].mParam isEqualToString:@"colorLevel"]){
+        NSLog(@"[CDVLive] reloadSkinView colorLevel = %f",skinParams[1].mValue);
+    }
     _skinView.dataArray = skinParams;
     _skinView.selectedIndex = 0;
     FUBeautyParam *modle = skinParams[0];
@@ -401,6 +365,7 @@
 }
 
 -(void)reloadFilterView:(NSArray<FUBeautyParam *> *)filterParams{
+    _beautyFilterView.selectedIndex = self.selectedIndex;
     _beautyFilterView.filters = filterParams;
     [_beautyFilterView reloadData];
 }

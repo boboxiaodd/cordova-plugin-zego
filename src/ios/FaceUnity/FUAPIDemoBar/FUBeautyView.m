@@ -40,6 +40,9 @@
     
     if (indexPath.row < self.dataArray.count){
         FUBeautyParam *modle = self.dataArray[indexPath.row] ;
+        if([modle.mParam isEqualToString:@"colorLevel"]){
+            NSLog(@"[CDVLive] colorLevel = %f",modle.mValue);
+        }
         NSString *imageName ;
         
             BOOL opened = YES;
