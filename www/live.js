@@ -1,8 +1,8 @@
 const exec = require('cordova/exec');
 const CDVZegoLive = {
     //异步回调
-    initZego: function (success){
-        exec(success, null, 'CDVZegoLive', 'initZego', []);
+    initZego: function (success, options){
+        exec(success, null, 'CDVZegoLive', 'initZego', [options]);
     },
     joinRoom: function (option) {
         exec(null, null, 'CDVZegoLive', 'joinRoom', [option]);
