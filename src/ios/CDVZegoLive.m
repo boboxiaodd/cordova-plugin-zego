@@ -70,6 +70,8 @@
 }
 -(void)initZego:(CDVInvokedUrlCommand *)command
 {
+    NSDictionary *options = [command.arguments objectAtIndex: 0];
+    int lowlight = [[options valueForKey:@"lowlight"] intValue];
     dispatch_async(dispatch_get_global_queue(0, 0), ^{
         NSLog(@"--------------- init CDVZegoLive start --------");
         if(self->_zego) {
@@ -84,9 +86,20 @@
 
         [self->_zego enableHardwareDecoder:YES];
         [self->_zego enableHardwareEncoder:YES];
+        switch (lowlight) {
+            case 0:
+                [self->_zego setLowlightEnhancement:ZegoLowlightEnhancementModeOff channel:ZegoPublishChannelMain];
+                break;
+            case 1:
+                [self->_zego setLowlightEnhancement:ZegoLowlightEnhancementModeOn channel:ZegoPublishChannelMain];
+                break;
+            case 2:
+                [self->_zego setLowlightEnhancement:ZegoLowlightEnhancementModeAuto channel:ZegoPublishChannelMain];
+                break;
+            default:
+                break;
+        }
         
-        [self->_zego setLowlightEnhancement:ZegoLowlightEnhancementModeAuto channel:ZegoPublishChannelMain];
-
         
         [FUManager shareManager].isRender = YES;
         
