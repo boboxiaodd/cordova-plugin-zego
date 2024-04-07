@@ -64,7 +64,7 @@
             </config>
             <pods use-frameworks="true">
                 <pod name="Masonry" />
-                <pod name="FURenderKit" version="8.8.0" />
+                <pod name="FURenderKit" spec="8.8.0" />
                 <pod name="ZegoExpressEngine" />
             </pods>
         </podspec>
