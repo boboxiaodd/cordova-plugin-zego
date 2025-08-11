@@ -63,7 +63,7 @@
                 <source url="https://github.com/CocoaPods/Specs.git"/>
             </config>
             <pods use-frameworks="true">
-                <pod name="FURenderKit" spec="8.4.1" />
+                <pod name="FURenderKit" />
                 <pod name="ZegoExpressEngine" />
             </pods>
         </podspec>
