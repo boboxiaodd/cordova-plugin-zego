@@ -5,7 +5,6 @@
 #import <FURenderKit/FURenderKit.h>
 #import "FUManager.h"
 #import "FUAPIDemoBar.h"
-#import <Masonry/Masonry.h>
 #import <AVFoundation/AVFoundation.h>
 #import <AudioToolbox/AudioToolbox.h>
 #import <AVKit/AVKit.h>
@@ -48,7 +47,7 @@
 #pragma mark ZegoCustomVideoProcessHandler
 
 - (void)onStart:(ZegoPublishChannel)channel{
-//    [FURenderKit shareRenderKit].beauty = _beauty;    
+//    [FURenderKit shareRenderKit].beauty = _beauty;
 }
 - (void)onStop:(ZegoPublishChannel)channel{
 //    [FURenderKit clear];
@@ -86,6 +85,7 @@
         [self->_zego enableHardwareEncoder:YES];
         
         [self->_zego setLowlightEnhancement:ZegoLowlightEnhancementModeAuto channel:ZegoPublishChannelMain];
+
         
         [FUManager shareManager].isRender = YES;
         
@@ -245,6 +245,7 @@
     _playViewText.backgroundColor = [self colorWithHex:0x000000 alpha:0.3];
     _playViewText.font = [UIFont systemFontOfSize:12.0];
     _playViewText.textColor = [UIColor whiteColor];
+    
     _playViewText.textAlignment = NSTextAlignmentCenter;
     _playViewText.text = @"";
     [_playViewText setHidden:YES];
@@ -353,8 +354,8 @@
             imageData = nil;
             [self send_event: self->_live_command withMessage:@{@"event":@"screen",@"base64":base64str} Alive:YES State:YES];
         }];
-//        
-//        
+//
+//
 //        NSData *imageData = UIImageJPEGRepresentation([self imageFromView: _mineView ], 0.8);
 //        NSURL *tmpDirURL = [NSURL fileURLWithPath:NSTemporaryDirectory() isDirectory:YES];
 //        NSURL *fileURL = [[tmpDirURL URLByAppendingPathComponent:[[NSUUID UUID] UUIDString]] URLByAppendingPathExtension:@"jpg"];
@@ -396,15 +397,41 @@
         _demoBar.mDelegate = self;
         [_beautyView addSubview:_demoBar];
 
-        [_demoBar mas_makeConstraints:^(MASConstraintMaker *make) {
-            if (@available(iOS 11.0, *)) {
-                make.bottom.equalTo(self.viewController.view.mas_safeAreaLayoutGuideBottom);
-            } else {
-                make.bottom.equalTo(self.viewController.view.mas_bottom);
-            }
-            make.left.right.equalTo(self.viewController.view);
-            make.height.mas_equalTo(BEAUTY_VIEW_HEIGHT);
-        }];
+//        [_demoBar mas_makeConstraints:^(MASConstraintMaker *make) {
+//            if (@available(iOS 11.0, *)) {
+//                make.bottom.equalTo(self.viewController.view.mas_safeAreaLayoutGuideBottom);
+//            } else {
+//                make.bottom.equalTo(self.viewController.view.mas_bottom);
+//            }
+//            make.left.right.equalTo(self.viewController.view);
+//            make.height.mas_equalTo(BEAUTY_VIEW_HEIGHT);
+//        }];
+        
+        // 关闭自动转换的掩码约束
+        _demoBar.translatesAutoresizingMaskIntoConstraints = NO;
+
+        // 创建约束集合
+        NSMutableArray<NSLayoutConstraint *> *constraints = [NSMutableArray array];
+
+        // 底部约束（兼容 iOS 11+）
+        if (@available(iOS 11.0, *)) {
+            [constraints addObject:[_demoBar.bottomAnchor constraintEqualToAnchor:self.viewController.view.safeAreaLayoutGuide.bottomAnchor]];
+        } else {
+            [constraints addObject:[_demoBar.bottomAnchor constraintEqualToAnchor:self.viewController.view.bottomAnchor]];
+        }
+
+        // 左右约束（保持与父视图对齐）
+        [constraints addObjectsFromArray:@[
+            // 左侧约束
+            [_demoBar.leftAnchor constraintEqualToAnchor:self.viewController.view.leftAnchor],
+            // 右侧约束
+            [_demoBar.rightAnchor constraintEqualToAnchor:self.viewController.view.rightAnchor],
+            // 高度约束
+            [_demoBar.heightAnchor constraintEqualToConstant:BEAUTY_VIEW_HEIGHT]
+        ]];
+
+        // 激活所有约束
+        [NSLayoutConstraint activateConstraints:constraints];
 
 
         CGRect mainRect = _beautyView.frame;
