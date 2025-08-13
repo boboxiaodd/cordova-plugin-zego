@@ -1,5 +1,5 @@
 {
-    "name": "live",
+    "name": "cordova-plugin-zego",
     "version": "0.0.1",
     "description": "Photo Picker",
     "cordova": {
