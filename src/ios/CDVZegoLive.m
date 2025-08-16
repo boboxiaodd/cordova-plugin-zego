@@ -228,7 +228,7 @@
     _live_command = command;
     _is_video_call = YES;
     [[UIApplication sharedApplication] setIdleTimerDisabled:YES];
-    if(!_rootVC) _rootVC = (MainViewController *)[UIApplication sharedApplication].keyWindow.rootViewController;
+    if(!_rootVC) _rootVC = (MainViewController *)[self getKeyWindow].rootViewController;
     _rootVC.webView.backgroundColor = UIColor.clearColor;
     _rootVC.webView.opaque = false;
     //创建拉流view
@@ -254,7 +254,7 @@
     [_rootVC.view insertSubview:_playView belowSubview:_rootVC.webView];
     //创建预览view
     CGSize size = [UIScreen mainScreen].bounds.size;
-    CGFloat safeTop =  UIApplication.sharedApplication.keyWindow.safeAreaInsets.top;
+    CGFloat safeTop =  self.viewController.view.safeAreaInsets.top;// UIApplication.sharedApplication.keyWindow.safeAreaInsets.top;
     _mineView = [[UIView alloc] initWithFrame:CGRectMake(size.width - _minWindowWidth - 8, safeTop + 8, _minWindowWidth, _minWindowHeight)];
     
     //增加模糊层
@@ -364,12 +364,24 @@
 //        [self send_event: _live_command withMessage:@{@"event":@"screen",@"path":[fileURL path]} Alive:YES State:YES];
     }
 }
+-(UIWindow *)getKeyWindow
+{
+    UIWindow *keyWindow = nil;
+    for (UIWindow *window in UIApplication.sharedApplication.windows) {
+        if (window.isKeyWindow) {
+            keyWindow = window;
+            NSLog(@"find keyWindow");
+            break;
+        }
+    }
+    return keyWindow;
+}
 
 -(void) startPreview:(CDVInvokedUrlCommand *)command
 {
     _live_command = command;
     _playView = [[UIView alloc] initWithFrame:UIScreen.mainScreen.bounds];
-    if(!_rootVC) _rootVC = (MainViewController *)[UIApplication sharedApplication].keyWindow.rootViewController;
+    if(!_rootVC) _rootVC = (MainViewController *)[self getKeyWindow].rootViewController;
     _rootVC.webView.backgroundColor = UIColor.clearColor;
     _rootVC.webView.opaque = false;
     [_rootVC.view insertSubview:_playView belowSubview: _rootVC.webView];
@@ -389,7 +401,7 @@
 -(void) showBeauty:(CDVInvokedUrlCommand *)command
 {
     if(!_beautyView){
-        CGFloat safeBottom =  UIApplication.sharedApplication.keyWindow.safeAreaInsets.bottom;
+        CGFloat safeBottom =  self.viewController.view.safeAreaInsets.bottom;
         CGRect rect = UIScreen.mainScreen.bounds;
         _beautyView = [[UIView alloc] initWithFrame:CGRectMake(0, rect.size.height, rect.size.width, BEAUTY_VIEW_HEIGHT + safeBottom)];
         [self.viewController.view addSubview:_beautyView];
@@ -555,7 +567,7 @@
 {
     if(_beautyView) [self hideBeauty:nil];
     CGSize size = [UIScreen mainScreen].bounds.size;
-    CGFloat safeTop =  UIApplication.sharedApplication.keyWindow.safeAreaInsets.top;
+    CGFloat safeTop =  self.viewController.view.safeAreaInsets.top;
     if(!_hasSwitchView){
         [_mineView removeGestureRecognizer:self.panGesture];
         [_mineView removeGestureRecognizer:self.switchGesture];
