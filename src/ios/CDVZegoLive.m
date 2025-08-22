@@ -205,21 +205,14 @@
     NSString *text = [options valueForKey:@"text"];
     BOOL showBlur = [[options valueForKey:@"showBlur"] boolValue];
     if(showBlur){
+        [_playVisualView setHidden:NO];
         if([text isEqualToString:@""]){
-            [_playVisualView setHidden:YES];
-            [_playViewText setHidden:YES];
-        }else{
-            [_playVisualView setHidden:NO];
             [_playViewText setHidden:NO];
             [_playViewText setText:text];
         }
     }else{
-        if([text isEqualToString:@""]){
-            [_playViewText setHidden:YES];
-        }else{
-            [_playViewText setText:text];
-            [_playViewText setHidden:NO];
-        }
+        [_playVisualView setHidden:YES];
+        [_playViewText setHidden:YES];
     }
 }
 
