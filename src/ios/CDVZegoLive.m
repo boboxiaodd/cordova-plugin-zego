@@ -182,22 +182,32 @@
     NSString *text = [options valueForKey:@"text"];
     BOOL showBlur = [[options valueForKey:@"showBlur"] boolValue];
     if(showBlur){
-        if([text isEqualToString:@""]){
-            [_mineVisualView setHidden:YES];
-            [_mineViewText setHidden:YES];
-        }else{
-            [_mineVisualView setHidden:NO];
+        [_mineVisualView setHidden:NO];
+        if(![text isEqualToString:@""]){
             [_mineViewText setHidden:NO];
             [_mineViewText setText:text];
         }
     }else{
-        if([text isEqualToString:@""]){
-            [_mineViewText setHidden:YES];
-        }else{
-            [_mineViewText setText:text];
-            [_mineViewText setHidden:NO];
-        }
+        [_mineVisualView setHidden:YES];
+        [_mineViewText setHidden:YES];
     }
+//    if(showBlur){
+//        if([text isEqualToString:@""]){
+//            [_mineVisualView setHidden:YES];
+//            [_mineViewText setHidden:YES];
+//        }else{
+//            [_mineVisualView setHidden:NO];
+//            [_mineViewText setHidden:NO];
+//            [_mineViewText setText:text];
+//        }
+//    }else{
+//        if([text isEqualToString:@""]){
+//            [_mineViewText setHidden:YES];
+//        }else{
+//            [_mineViewText setText:text];
+//            [_mineViewText setHidden:NO];
+//        }
+//    }
 }
 -(void) setPlayViewText:(CDVInvokedUrlCommand *)command
 {
@@ -206,7 +216,7 @@
     BOOL showBlur = [[options valueForKey:@"showBlur"] boolValue];
     if(showBlur){
         [_playVisualView setHidden:NO];
-        if([text isEqualToString:@""]){
+        if(![text isEqualToString:@""]){
             [_playViewText setHidden:NO];
             [_playViewText setText:text];
         }
